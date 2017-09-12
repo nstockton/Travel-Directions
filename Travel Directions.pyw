@@ -14,6 +14,7 @@ from threading import Thread
 from bs4 import BeautifulSoup
 import dateutil.tz
 import googlemaps
+from googlemaps.exceptions import ApiError, HTTPError, Timeout, TransportError
 import requests.packages.urllib3
 import wx
 import wx.lib.dialogs
@@ -448,13 +449,13 @@ class MainFrame(wx.Frame):
 	def _retrieve(self, **params):
 		try:
 			response = self.gmaps.directions(**params)
-		except googlemaps.exceptions.Timeout:
-			response = "timeout"
+		except Timeout:
+			return self.notify("error", "The server failed to respond.")
+		except (ApiError, HTTPError, TransportError) as e:
+			return self.notify("error", e.message)
 		wx.CallAfter(self._process_results, response)
 
 	def _process_results(self, response):
-		if response == "timeout":
-			return self.notify("error", "The response time of the server exceeded the timeout.")
 		summaries = []
 		text = []
 		for route_counter, route in enumerate(response):
