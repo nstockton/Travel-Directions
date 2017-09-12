@@ -99,3 +99,7 @@ ENV/
 
 # mypy
 .mypy_cache/
+
+# Project specific stuff
+key.py
+Travel\ Directions\ V*/

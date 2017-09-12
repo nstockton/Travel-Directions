@@ -1,0 +1,6 @@
+requests[security]
+googlemaps
+bs4
+python-dateutil
+wxpython
+git+https://github.com/nstockton/speechlight.git
