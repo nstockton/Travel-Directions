@@ -527,6 +527,8 @@ class MainFrame(wx.Frame):
 				details.append("\n".join(route["warnings"]))
 			self.results.append("\n".join(details).strip())
 		self.say("{} Route{} found.".format(len(self.results), "" if len(self.results) == 1 else "s"))
+		if not self.results:
+			return
 		self.routes.SetItems(summaries)
 		self.routes.SetSelection(0)
 		self.output_area.SetValue(self.results[0])
