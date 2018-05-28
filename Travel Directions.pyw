@@ -118,7 +118,7 @@ class MainFrame(wx.Frame):
 		self.label_hours.Disable()
 		self.hours.Disable()
 		self.label_minutes = wx.StaticText(self.panel, wx.ID_ANY, ":")
-		self.minutes = wx.Choice(self.panel, wx.ID_ANY, choices=["%02d"%x for x in xrange(60)])
+		self.minutes = wx.Choice(self.panel, wx.ID_ANY, choices=["{:02d}".format(x) for x in xrange(60)])
 		self.minutes.Bind(wx.EVT_CHOICE, self.on_date_changed, self.minutes)
 		self.label_minutes.Disable()
 		self.minutes.Disable()
@@ -276,7 +276,7 @@ class MainFrame(wx.Frame):
 		year = int(self.years.GetValue())
 		month = self.months.GetSelection() + 1
 		day = self.days.GetSelection() + 1
-		hour = ((self.hours.GetSelection() + 1) % 12) + (self.am_pm.GetSelection() * 12)
+		hour = ((self.hours.GetSelection() + 1) % 12) + 12 if self.am_pm.GetSelection() == 1 else 0
 		minute = self.minutes.GetSelection()
 		return datetime(year, month, day, hour, minute)
 
