@@ -201,7 +201,7 @@ class MainFrame(wx.Frame):
 		self.entry_sizer.Add(self.depart_arrive_sizer, proportion=0, flag=wx.EXPAND | wx.TOP, border=25)
 		self.entry_sizer.Add(self.date_time_sizer, proportion=0, flag=wx.EXPAND | wx.TOP, border=10)
 		self.entry_sizer.Add(self.transit_preferences_sizer, proportion=0, flag=wx.EXPAND | wx.TOP, border=10)
-		self.entry_sizer.Add(self.plan_button, proportion=0, flag=wx.EXPAND | wx.TOP | wx.ALIGN_CENTER_HORIZONTAL, border=30)
+		self.entry_sizer.Add(self.plan_button, proportion=0, flag=wx.EXPAND | wx.TOP, border=30)
 		self.results_sizer = wx.BoxSizer(wx.VERTICAL)
 		self.results_sizer.Add(self.routes_sizer, proportion=0, flag=wx.EXPAND, border=1)
 		self.results_sizer.Add(self.label_output_area)

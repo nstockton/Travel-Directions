@@ -3,4 +3,6 @@ googlemaps
 bs4
 python-dateutil
 wxpython
-git+https://github.com/nstockton/speechlight.git
+pywin32
+#git+https://github.com/nstockton/speechlight.git#egg=speechlight
+https://github.com/nstockton/speechlight/archive/master.zip
