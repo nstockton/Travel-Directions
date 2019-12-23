@@ -4,6 +4,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+# Built-in modules:
 import calendar
 from datetime import datetime
 import os.path
@@ -11,29 +12,27 @@ import platform
 import sys
 from threading import Thread
 
+# Third-party modules:
 from bs4 import BeautifulSoup
 import dateutil.tz
 import googlemaps
 from googlemaps.exceptions import ApiError, HTTPError, Timeout, TransportError
 import requests.packages.urllib3
-import wx
-import wx.lib.dialogs
-try:
-	# WXPython Phoenix.
-	from wx.adv import Sound, SOUND_ASYNC
-except ImportError:
-	from wx import Sound, SOUND_ASYNC
 try:
 	from speechlight import Speech
 except ImportError:
 	Speech = None
+import wx
+import wx.lib.dialogs
+from wx.adv import Sound, SOUND_ASYNC
 
+# Local modules:
 from constants import APP_NAME, WINDOW_WIDTH, WINDOW_HEIGHT, ABOUT_TEXT
-
 try:
 	from key import API_KEY
 except ImportError:
 	API_KEY = None
+
 
 try:
 	if sys.frozen or sys.importers:
@@ -55,16 +54,10 @@ if SYSTEM_PLATFORM == "Darwin":
 
 HTML_PARSER = "html.parser"
 
-try:
-	xrange
-except NameError:
-	# Python 3 compatibility.
-	xrange = range
-
 
 class MainFrame(wx.Frame):
 	def __init__(self, *args, **kwargs):
-		wx.Frame.__init__(self, *args, **kwargs)
+		super().__init__(*args, **kwargs)
 		menu_bind = lambda item, handler: self.Bind(wx.EVT_MENU, handler, item)
 		self.menu_bar = wx.MenuBar()
 		self.SetMenuBar(self.menu_bar)
@@ -113,13 +106,13 @@ class MainFrame(wx.Frame):
 		self.label_years.Disable()
 		self.years.Disable()
 		self.label_hours = wx.StaticText(self.panel, wx.ID_ANY, "At:")
-		self.hours = wx.Choice(self.panel, wx.ID_ANY, choices=[str(x) for x in xrange(1, 13)], style=wx.WANTS_CHARS)
+		self.hours = wx.Choice(self.panel, wx.ID_ANY, choices=[str(i) for i in range(1, 13)], style=wx.WANTS_CHARS)
 		self.hours.Bind(wx.EVT_CHOICE, self.on_date_changed, self.hours)
 		self.hours.Bind(wx.EVT_KEY_DOWN, self.on_date_key_press)
 		self.label_hours.Disable()
 		self.hours.Disable()
 		self.label_minutes = wx.StaticText(self.panel, wx.ID_ANY, ":")
-		self.minutes = wx.Choice(self.panel, wx.ID_ANY, choices=["{:02d}".format(x) for x in xrange(60)])
+		self.minutes = wx.Choice(self.panel, wx.ID_ANY, choices=["{:02d}".format(i) for i in range(60)])
 		self.minutes.Bind(wx.EVT_CHOICE, self.on_date_changed, self.minutes)
 		self.label_minutes.Disable()
 		self.minutes.Disable()
@@ -278,12 +271,13 @@ class MainFrame(wx.Frame):
 		year = int(self.years.GetValue())
 		month = self.months.GetSelection() + 1
 		day = self.days.GetSelection() + 1
-		hour = ((self.hours.GetSelection() + 1) % 12) + 12 if self.am_pm.GetSelection() == 1 else 0
+		hour = ((self.hours.GetSelection() + 1) % 12) + self.am_pm.GetSelection() * 12
 		minute = self.minutes.GetSelection()
 		return datetime(year, month, day, hour, minute)
 
 	def on_date_changed(self, event):
 		event_object = event.GetEventObject()
+		previously_selected_day = self.days.GetSelection()
 		if event_object is self.months:
 			# If a new month has been selected, reset the day to the 1st of the month.
 			# If this is not done before a datetime object for the selected date is built, a day value outside of the valid range for the newly selected month could be passed to the datetime constructor, resulting in an exception being thrown.
@@ -292,12 +286,15 @@ class MainFrame(wx.Frame):
 		selected = self.selected_datetime()
 		# If the month, day, or hour selected by the user is in the present or future, use the current year. Otherwise, use the year following current.
 		year = now.year if (selected.month, selected.day, selected.hour) >= (now.month, now.day, now.hour) else now.year + 1
-		self.years.SetValue("{}".format(year))
+		self.years.SetValue(str(year))
 		if event_object is self.months:
 			month = event.GetSelection() + 1
 			max_days = calendar.monthrange(year, month)[1]
-			self.days.SetItems(["{:02d}".format(x) for x in xrange(1, max_days + 1)])
-			self.days.SetSelection(0)
+			self.days.SetItems(["{:02d}".format(i) for i in range(1, max_days + 1)])
+			if previously_selected_day < max_days:
+				self.days.SetSelection(previously_selected_day)
+			else:
+				self.days.SetSelection(max_days - 1)
 
 	def on_date_key_press(self, event):
 		event_object = event.GetEventObject()
@@ -335,7 +332,7 @@ class MainFrame(wx.Frame):
 			self.label_months.Enable()
 			self.months.Enable()
 			max_days = calendar.monthrange(now.year, now.month)[1]
-			self.days.SetItems(["{:02d}".format(x) for x in xrange(1, max_days + 1)])
+			self.days.SetItems(["{:02d}".format(i) for i in range(1, max_days + 1)])
 			self.days.SetSelection(now.day - 1)
 			self.label_days.Enable()
 			self.days.Enable()
@@ -395,7 +392,7 @@ class MainFrame(wx.Frame):
 
 	def on_search(self, event):
 		"""Performs a directions search."""
-		del self.results[:]
+		self.results.clear()
 		self.label_routes.Disable()
 		self.routes.Disable()
 		self.routes.Clear()
@@ -466,27 +463,27 @@ class MainFrame(wx.Frame):
 		summaries = []
 		text = []
 		for route_counter, route in enumerate(response):
-			summaries.append("Route {}".format(route_counter + 1))
+			summaries.append(f"Route {route_counter + 1}")
 			details = []
 			for leg in route["legs"]:
-				details.append("From: {}\nTo: {}".format(leg["start_address"], leg["end_address"]))
+				details.append(f"From: {leg['start_address']}\nTo: {leg['end_address']}")
 				if "distance" in leg:
-					text.append("Total Distance: {}".format(leg["distance"]["text"]))
+					text.append(f"Total Distance: {leg['distance']['text']}")
 				if "duration" in leg:
-					text.append("({})".format(leg["duration"]["text"]))
+					text.append(f"({leg['duration']['text']})")
 				if text:
 					details.append(" ".join(text))
-					del text[:]
+					text.clear()
 				if "departure_time" in leg:
-					details.append("Departing: {}".format(leg["departure_time"]["text"]))
+					details.append(f"Departing: {leg['departure_time']['text']}")
 				if "arrival_time" in leg:
-					details.append("Arriving: {}".format(leg["arrival_time"]["text"]))
+					details.append(f"Arriving: {leg['arrival_time']['text']}")
 				for step in leg["steps"]:
 					transit_details = step["transit_details"] if "transit_details" in step else {}
 					line = transit_details["line"] if "line" in transit_details else {}
 					vehicle = line["vehicle"] if "vehicle" in line else {}
 					if "departure_time" in transit_details:
-						text.append("At {},".format(transit_details["departure_time"]["text"]))
+						text.append(f"At {transit_details['departure_time']['text']},")
 					if "short_name" in line or "name" in line:
 						text.append("board")
 					if "short_name" in line:
@@ -496,45 +493,60 @@ class MainFrame(wx.Frame):
 					if "name" in vehicle:
 						text.append(vehicle["name"])
 					if "headsign" in transit_details:
-						text.append("to {}".format(transit_details["headsign"]))
+						text.append(f"to {transit_details['headsign']}")
 					if "departure_stop" in transit_details:
-						text.append("from {}".format(transit_details["departure_stop"]["name"]))
+						text.append(f"from {transit_details['departure_stop']['name']}")
 					if "num_stops" in transit_details:
-						text.append("\nTravel {} stops,".format(transit_details["num_stops"]))
+						text.append(f"\nTravel {transit_details['num_stops']} stops,")
 					if step["travel_mode"] != "TRANSIT" and "html_instructions" in step:
-						text.append("\n".join(BeautifulSoup(step["html_instructions"].replace("<b>", "").replace("</b>", ""), HTML_PARSER).findAll(text=True)))
+						text.append(
+							"\n".join(
+								BeautifulSoup(
+									step["html_instructions"].replace("<b>", "").replace("</b>", ""),
+									HTML_PARSER
+								).findAll(text=True)
+							)
+						)
 						details.append(" ".join(text).capitalize())
-						del text[:]
+						text.clear()
 					if "distance" in step:
-						text.append("Travel {}".format(step["distance"]["text"]))
+						text.append(f"Travel {step['distance']['text']}")
 					if "duration" in step:
-						text.append("(about {})".format(step["duration"]["text"]))
+						text.append(f"(about {step['duration']['text']})")
 					if text:
 						details.append(" ".join(text).capitalize())
-						del text[:]
+						text.clear()
 					if "arrival_time" in transit_details:
-						text.append("At {}".format(transit_details["arrival_time"]["text"]))
+						text.append(f"At {transit_details['arrival_time']['text']}")
 					if "arrival_stop" in transit_details:
-						text.append("disembark at {}".format(transit_details["arrival_stop"]["name"]))
+						text.append(f"disembark at {transit_details['arrival_stop']['name']}")
 					if text:
 						details.append(" ".join(text).capitalize())
-						del text[:]
+						text.clear()
 					sub_steps = step["steps"] if "steps" in step else []
 					for sub_step in sub_steps:
 						if "html_instructions" in sub_step:
-							details.append("* " + "\n* ".join(BeautifulSoup(sub_step["html_instructions"].replace("<b>", "").replace("</b>", ""), HTML_PARSER).findAll(text=True)).capitalize())
+							details.append(
+								"* "
+								+ "\n* ".join(
+									BeautifulSoup(
+										sub_step["html_instructions"].replace("<b>", "").replace("</b>", ""),
+										HTML_PARSER
+									).findAll(text=True)
+								).capitalize()
+							)
 							if "distance" in sub_step:
-								text.append("Travel {}".format(sub_step["distance"]["text"]))
+								text.append(f"Travel {sub_step['distance']['text']}")
 							if "duration" in sub_step:
-								text.append("(about {})".format(sub_step["duration"]["text"]))
+								text.append(f"(about {sub_step['duration']['text']})")
 							if text:
 								details.append("* " + " ".join(text).capitalize())
-								del text[:]
+								text.clear()
 			if "warnings" in route:
 				details.append("")
 				details.append("\n".join(route["warnings"]))
 			self.results.append("\n".join(details).strip())
-		self.say("{} Route{} found.".format(len(self.results), "" if len(self.results) == 1 else "s"))
+		self.say(f"{len(self.results)} Route{'' if len(self.results) == 1 else 's'} found.")
 		if not self.results:
 			return
 		self.routes.SetItems(summaries)
