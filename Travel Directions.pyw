@@ -27,7 +27,6 @@ import wx.lib.dialogs
 from wx.adv import Sound, SOUND_ASYNC
 
 # Local modules:
-from constants import APP_NAME, WINDOW_WIDTH, WINDOW_HEIGHT, ABOUT_TEXT
 try:
 	from key import API_KEY
 except ImportError:
@@ -53,6 +52,24 @@ if SYSTEM_PLATFORM == "Darwin":
 	from Cocoa import NSSound
 
 HTML_PARSER = "html.parser"
+
+APP_NAME = "Travel Directions"
+APP_VERSION = "1.1"
+AUTHOR = "Nick Stockton"
+AUTHOR_EMAIL = "nstockton@gmail.com"
+WINDOW_WIDTH = 600
+WINDOW_HEIGHT = 480
+
+ABOUT_TEXT = f"""
+{APP_NAME} (V{APP_VERSION})
+By {AUTHOR} <{AUTHOR_EMAIL}>
+
+Binaries of this product have been made available to you under the Mozilla Public License 2.0 (MPL).
+You can obtain a copy of the MPL at http://mozilla.org/MPL/2.0/.
+You should have received a copy of the product source code in addition to the product binaries.
+If you did not receive a copy of the product source code, please send a request
+to the person or persons from which you obtained these product binaries.
+""".lstrip()
 
 
 class MainFrame(wx.Frame):
