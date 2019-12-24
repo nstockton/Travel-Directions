@@ -5,15 +5,13 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import glob
-import os.path
 import shutil
 import sys
-from zipfile import ZipFile, ZIP_DEFLATED
 from distutils.core import setup
 
 import requests
 
-import py2exe
+import py2exe  # NOQA: F401
 try:
 	import speechlight
 except ImportError:
@@ -56,11 +54,11 @@ class Target(object):
 
 program = Target(
 	# used for the versioninfo resource
-	description = "{} {}".format(APP_NAME, APP_VERSION),
+	description="{} {}".format(APP_NAME, APP_VERSION),
 	# what to build
-	script = "{}.pyw".format(APP_NAME),
-	other_resources = [(RT_MANIFEST, 1, MANIFEST_TEMPLATE % dict(prog=APP_NAME))],
-	dest_base = APP_NAME
+	script="{}.pyw".format(APP_NAME),
+	other_resources=[(RT_MANIFEST, 1, MANIFEST_TEMPLATE % dict(prog=APP_NAME))],
+	dest_base=APP_NAME
 )
 
 
@@ -146,9 +144,9 @@ if speechlight is not None:
 
 setup(
 	options=options,
-	zipfile = None,
-	windows = [program],
-	data_files = data_files,
+	zipfile=None,
+	windows=[program],
+	data_files=data_files,
 )
 
 # Remove the build folder since we no longer need it.

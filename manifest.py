@@ -2,8 +2,9 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-# The manifest will be inserted as a resource into the executable. This gives the controls the Windows XP appearance (if run on XP)
-MANIFEST_TEMPLATE = """\
+# The manifest will be inserted as a resource into the executable.
+# This gives the controls the Windows XP appearance (if run on XP)
+MANIFEST_TEMPLATE = """
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">
 <assemblyIdentity
@@ -47,6 +48,6 @@ MANIFEST_TEMPLATE = """\
 	</dependentAssembly>
 </dependency>
 </assembly>
-"""
+""".lstrip()
 
 RT_MANIFEST = 24

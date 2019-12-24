@@ -18,7 +18,6 @@ import certifi
 import dateutil.tz
 import googlemaps
 from googlemaps.exceptions import ApiError, HTTPError, Timeout, TransportError
-import requests.packages.urllib3
 try:
 	from speechlight import Speech
 except ImportError:
@@ -59,15 +58,14 @@ HTML_PARSER = "html.parser"
 class MainFrame(wx.Frame):
 	def __init__(self, *args, **kwargs):
 		super().__init__(*args, **kwargs)
-		menu_bind = lambda item, handler: self.Bind(wx.EVT_MENU, handler, item)
 		self.menu_bar = wx.MenuBar()
 		self.SetMenuBar(self.menu_bar)
 		self.menu_file = wx.Menu()
 		self.menu_help = wx.Menu()
 		self.menu_bar.Append(self.menu_file, "&File")
-		menu_bind(self.menu_file.Append(wx.ID_ANY, "E&xit"), self.on_exit)
+		self.menu_bind(self.menu_file.Append(wx.ID_ANY, "E&xit"), self.on_exit)
 		self.menu_bar.Append(self.menu_help, "&Help")
-		menu_bind(self.menu_help.Append(wx.ID_ANY, "&About {}".format(APP_NAME)), self.on_about)
+		self.menu_bind(self.menu_help.Append(wx.ID_ANY, "&About {}".format(APP_NAME)), self.on_about)
 		self.panel = wx.Panel(self, wx.ID_ANY)
 		self.panel.SetBackgroundColour("MEDIUM FOREST GREEN")
 		self.panel.SetForegroundColour("White")
@@ -81,16 +79,36 @@ class MainFrame(wx.Frame):
 		self.modes.SetSelection(0)
 		self.label_waypoints_area = wx.StaticText(self.panel, wx.ID_ANY, "&Waypoints:")
 		self.waypoints_area = wx.TextCtrl(self.panel, wx.ID_ANY, style=wx.TE_NOHIDESEL)
-		self.optimize_waypoints = wx.CheckBox(self.panel, wx.ID_ANY, label="Optimi&ze Waypoints", style=wx.CHK_2STATE | wx.ALIGN_RIGHT)
-		self.avoid_highways = wx.CheckBox(self.panel, wx.ID_ANY, label="Avoid H&ighways", style=wx.CHK_2STATE | wx.ALIGN_RIGHT)
-		self.avoid_tolls = wx.CheckBox(self.panel, wx.ID_ANY, label="Avoid &Toll Roads", style=wx.CHK_2STATE | wx.ALIGN_RIGHT)
-		self.avoid_ferries = wx.CheckBox(self.panel, wx.ID_ANY, label="Avoid F&erries", style=wx.CHK_2STATE | wx.ALIGN_RIGHT)
+		self.optimize_waypoints = wx.CheckBox(
+			self.panel,
+			wx.ID_ANY,
+			label="Optimi&ze Waypoints",
+			style=wx.CHK_2STATE | wx.ALIGN_RIGHT
+		)
+		self.avoid_highways = wx.CheckBox(
+			self.panel,
+			wx.ID_ANY,
+			label="Avoid H&ighways",
+			style=wx.CHK_2STATE | wx.ALIGN_RIGHT
+		)
+		self.avoid_tolls = wx.CheckBox(
+			self.panel,
+			wx.ID_ANY,
+			label="Avoid &Toll Roads",
+			style=wx.CHK_2STATE | wx.ALIGN_RIGHT
+		)
+		self.avoid_ferries = wx.CheckBox(
+			self.panel,
+			wx.ID_ANY,
+			label="Avoid F&erries",
+			style=wx.CHK_2STATE | wx.ALIGN_RIGHT
+		)
 		self.label_depart_arrive = wx.StaticText(self.panel, wx.ID_ANY, "Type:")
 		self.depart_arrive = wx.Choice(self.panel, wx.ID_ANY, choices=["Depart after", "Arrive By"])
 		self.label_depart_arrive.Disable()
 		self.depart_arrive.Disable()
 		self.label_months = wx.StaticText(self.panel, wx.ID_ANY, "Date:")
-		self.months = wx.Choice(self.panel, wx.ID_ANY, choices=["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"])
+		self.months = wx.Choice(self.panel, wx.ID_ANY, choices=calendar.month_name[1:])
 		self.months.Bind(wx.EVT_CHOICE, self.on_date_changed, self.months)
 		self.label_months.Disable()
 		self.months.Disable()
@@ -127,10 +145,14 @@ class MainFrame(wx.Frame):
 		self.label_transit_mode.Disable()
 		self.transit_mode.Disable()
 		self.label_transit_routing_preference = wx.StaticText(self.panel, wx.ID_ANY, "Routing Preference:")
-		self.transit_routing_preference = wx.Choice(self.panel, wx.ID_ANY, choices=["Best", "Less Walking", "Fewer Transfers"])
+		self.transit_routing_preference = wx.Choice(
+			self.panel,
+			wx.ID_ANY,
+			choices=["Best", "Less Walking", "Fewer Transfers"]
+		)
 		self.label_transit_routing_preference.Disable()
 		self.transit_routing_preference.Disable()
-		self.plan_button = wx.Button(self.panel, label = "&Plan Trip")
+		self.plan_button = wx.Button(self.panel, label="&Plan Trip")
 		self.plan_button.Bind(wx.EVT_BUTTON, self.on_search)
 		self.label_routes = wx.StaticText(self.panel, wx.ID_ANY, "&Route Selection:")
 		self.routes = wx.Choice(self.panel, wx.ID_ANY, choices=[])
@@ -138,7 +160,11 @@ class MainFrame(wx.Frame):
 		self.label_routes.Disable()
 		self.routes.Disable()
 		self.label_output_area = wx.StaticText(self.panel, wx.ID_ANY, "Result &Details:")
-		self.output_area = wx.TextCtrl(self.panel, wx.ID_ANY, style = wx.TE_READONLY | wx.TE_MULTILINE | wx.TE_NOHIDESEL)
+		self.output_area = wx.TextCtrl(
+			self.panel,
+			wx.ID_ANY,
+			style=wx.TE_READONLY | wx.TE_MULTILINE | wx.TE_NOHIDESEL
+		)
 		self.output_area.SetBackgroundColour("Black")
 		self.output_area.SetForegroundColour("White")
 		self.output_area.Disable()
@@ -224,12 +250,20 @@ class MainFrame(wx.Frame):
 		self.tz_local = dateutil.tz.tzlocal()
 		self.results = []
 
+	def menu_bind(self, item, handler):
+		self.Bind(wx.EVT_MENU, handler, item)
+
 	def notify(self, msg_type, msg_text, msg_title=""):
 		"""Display a notification to the user."""
 		if not msg_title:
 			msg_title = msg_type.capitalize()
 		if msg_type == "question":
-			notify_box = wx.MessageDialog(self, message=msg_text, caption=msg_title, style=wx.ICON_QUESTION | wx.YES_NO)
+			notify_box = wx.MessageDialog(
+				self,
+				message=msg_text,
+				caption=msg_title,
+				style=wx.ICON_QUESTION | wx.YES_NO
+			)
 			modal = notify_box.ShowModal()
 			notify_box.Destroy()
 			return modal == wx.ID_YES
@@ -243,7 +277,7 @@ class MainFrame(wx.Frame):
 			notify_box.Destroy()
 
 	def play_sound(self, filename=None):
-		if not filename:
+		if filename is None:
 			return
 		elif SYSTEM_PLATFORM == "Darwin":
 			# Use Cocoa for playing sounds on Mac.
@@ -281,12 +315,18 @@ class MainFrame(wx.Frame):
 		previously_selected_day = self.days.GetSelection()
 		if event_object is self.months:
 			# If a new month has been selected, reset the day to the 1st of the month.
-			# If this is not done before a datetime object for the selected date is built, a day value outside of the valid range for the newly selected month could be passed to the datetime constructor, resulting in an exception being thrown.
+			# If this is not done before a datetime object for the selected date is
+			# built, a day value outside of the valid range for the newly selected month
+			# could be passed to the datetime constructor, resulting in an exception being thrown.
 			self.days.SetSelection(0)
 		now = datetime.now()
 		selected = self.selected_datetime()
-		# If the month, day, or hour selected by the user is in the present or future, use the current year. Otherwise, use the year following current.
-		year = now.year if (selected.month, selected.day, selected.hour) >= (now.month, now.day, now.hour) else now.year + 1
+		# If the month, day, or hour selected by the user is in the present or future, use
+		# the current year. Otherwise, use the year following current.
+		if (selected.month, selected.day, selected.hour) >= (now.month, now.day, now.hour):
+			year = now.year
+		else:
+			year = now.year + 1
 		self.years.SetValue(str(year))
 		if event_object is self.months:
 			month = event.GetSelection() + 1
@@ -430,7 +470,7 @@ class MainFrame(wx.Frame):
 			"alternatives": True,
 			"language": "en",
 			"region": "us",
-			"units": "imperial" # can also be "metric".
+			"units": "imperial"  # Can also be "metric".
 		}
 		if mode == "transit":
 			depart_arrive = ("departure_time", "arrival_time")[self.depart_arrive.GetSelection()]
@@ -439,7 +479,9 @@ class MainFrame(wx.Frame):
 			if self.transit_mode.GetSelection():
 				params["transit_mode"] = ("bus", "rail")[self.transit_mode.GetSelection() - 1]
 			if self.transit_routing_preference.GetSelection():
-				params["transit_routing_preference"] = ("less_walking", "fewer_transfers")[self.transit_routing_preference.GetSelection() - 1]
+				selection = self.transit_routing_preference.GetSelection()
+				routing_preference = ("less_walking", "fewer_transfers")[selection - 1]
+				params["transit_routing_preference"] = routing_preference
 		else:
 			if waypoints:
 				params["waypoints"] = waypoints
@@ -460,89 +502,91 @@ class MainFrame(wx.Frame):
 			return self.notify("error", e.message)
 		wx.CallAfter(self._process_results, response)
 
+	def _process_leg(self, leg):
+		result = []
+		text = []
+		result.append(f"From: {leg['start_address']}\nTo: {leg['end_address']}")
+		if "distance" in leg:
+			text.append(f"Total Distance: {leg['distance']['text']}")
+		if "duration" in leg:
+			text.append(f"({leg['duration']['text']})")
+		if text:
+			result.append(" ".join(text))
+		if "departure_time" in leg:
+			result.append(f"Departing: {leg['departure_time']['text']}")
+		if "arrival_time" in leg:
+			result.append(f"Arriving: {leg['arrival_time']['text']}")
+		return result
+
+	def _process_step(self, step):
+		result = []
+		text = []
+		transit_details = step.get("transit_details", {})
+		line = transit_details.get("line", {})
+		vehicle = line.get("vehicle", {})
+		if "departure_time" in transit_details:
+			text.append(f"At {transit_details['departure_time']['text']},")
+		if "short_name" in line or "name" in line:
+			line_name = " ".join((line.get("short_name", ""), line.get("name", "")))
+			text.append(f"board {line_name}")
+		if "name" in vehicle:
+			text.append(vehicle["name"])
+		if "headsign" in transit_details:
+			text.append(f"to {transit_details['headsign']}")
+		if "departure_stop" in transit_details:
+			text.append(f"from {transit_details['departure_stop']['name']}")
+		if "num_stops" in transit_details:
+			text.append(f"\nTravel {transit_details['num_stops']} stops,")
+		if step["travel_mode"] != "TRANSIT" and "html_instructions" in step:
+			html_instructions = step["html_instructions"].replace("<b>", "").replace("</b>", "")
+			text.append("\n".join(BeautifulSoup(html_instructions, HTML_PARSER).findAll(text=True)))
+			result.append(" ".join(text).capitalize())
+			text.clear()
+		if "distance" in step:
+			text.append(f"Travel {step['distance']['text']}")
+		if "duration" in step:
+			text.append(f"(about {step['duration']['text']})")
+		if text:
+			result.append(" ".join(text).capitalize())
+			text.clear()
+		if "arrival_time" in transit_details:
+			text.append(f"At {transit_details['arrival_time']['text']}")
+		if "arrival_stop" in transit_details:
+			text.append(f"disembark at {transit_details['arrival_stop']['name']}")
+		if text:
+			result.append(" ".join(text).capitalize())
+		return result
+
+	def _process_sub_step(self, sub_step):
+		text = []
+		result = []
+		if "html_instructions" in sub_step:
+			html_instructions = sub_step["html_instructions"].replace("<b>", "").replace("</b>", "")
+			result.append(
+				"* "
+				+ "\n* ".join(
+					BeautifulSoup(html_instructions, HTML_PARSER).findAll(text=True)
+				).capitalize()
+			)
+			if "distance" in sub_step:
+				text.append(f"Travel {sub_step['distance']['text']}")
+			if "duration" in sub_step:
+				text.append(f"(about {sub_step['duration']['text']})")
+			if text:
+				result.append("* " + " ".join(text).capitalize())
+		return result
+
 	def _process_results(self, response):
 		summaries = []
-		text = []
 		for route_counter, route in enumerate(response):
 			summaries.append(f"Route {route_counter + 1}")
 			details = []
 			for leg in route["legs"]:
-				details.append(f"From: {leg['start_address']}\nTo: {leg['end_address']}")
-				if "distance" in leg:
-					text.append(f"Total Distance: {leg['distance']['text']}")
-				if "duration" in leg:
-					text.append(f"({leg['duration']['text']})")
-				if text:
-					details.append(" ".join(text))
-					text.clear()
-				if "departure_time" in leg:
-					details.append(f"Departing: {leg['departure_time']['text']}")
-				if "arrival_time" in leg:
-					details.append(f"Arriving: {leg['arrival_time']['text']}")
+				details.extend(self._process_leg(leg))
 				for step in leg["steps"]:
-					transit_details = step["transit_details"] if "transit_details" in step else {}
-					line = transit_details["line"] if "line" in transit_details else {}
-					vehicle = line["vehicle"] if "vehicle" in line else {}
-					if "departure_time" in transit_details:
-						text.append(f"At {transit_details['departure_time']['text']},")
-					if "short_name" in line or "name" in line:
-						text.append("board")
-					if "short_name" in line:
-						text.append(line["short_name"])
-					if "name" in line:
-						text.append(line["name"])
-					if "name" in vehicle:
-						text.append(vehicle["name"])
-					if "headsign" in transit_details:
-						text.append(f"to {transit_details['headsign']}")
-					if "departure_stop" in transit_details:
-						text.append(f"from {transit_details['departure_stop']['name']}")
-					if "num_stops" in transit_details:
-						text.append(f"\nTravel {transit_details['num_stops']} stops,")
-					if step["travel_mode"] != "TRANSIT" and "html_instructions" in step:
-						text.append(
-							"\n".join(
-								BeautifulSoup(
-									step["html_instructions"].replace("<b>", "").replace("</b>", ""),
-									HTML_PARSER
-								).findAll(text=True)
-							)
-						)
-						details.append(" ".join(text).capitalize())
-						text.clear()
-					if "distance" in step:
-						text.append(f"Travel {step['distance']['text']}")
-					if "duration" in step:
-						text.append(f"(about {step['duration']['text']})")
-					if text:
-						details.append(" ".join(text).capitalize())
-						text.clear()
-					if "arrival_time" in transit_details:
-						text.append(f"At {transit_details['arrival_time']['text']}")
-					if "arrival_stop" in transit_details:
-						text.append(f"disembark at {transit_details['arrival_stop']['name']}")
-					if text:
-						details.append(" ".join(text).capitalize())
-						text.clear()
-					sub_steps = step["steps"] if "steps" in step else []
-					for sub_step in sub_steps:
-						if "html_instructions" in sub_step:
-							details.append(
-								"* "
-								+ "\n* ".join(
-									BeautifulSoup(
-										sub_step["html_instructions"].replace("<b>", "").replace("</b>", ""),
-										HTML_PARSER
-									).findAll(text=True)
-								).capitalize()
-							)
-							if "distance" in sub_step:
-								text.append(f"Travel {sub_step['distance']['text']}")
-							if "duration" in sub_step:
-								text.append(f"(about {sub_step['duration']['text']})")
-							if text:
-								details.append("* " + " ".join(text).capitalize())
-								text.clear()
+					details.extend(self._process_step(step))
+					for sub_step in step.get("steps", []):
+						details.extend(self._process_sub_step(sub_step))
 			if "warnings" in route:
 				details.append("")
 				details.append("\n".join(route["warnings"]))
@@ -558,8 +602,7 @@ class MainFrame(wx.Frame):
 		if len(self.results) > 1:
 			self.label_routes.Enable()
 			self.routes.Enable()
-			if MULTIPLE_CHOICE_SOUND:
-				self.play_sound(MULTIPLE_CHOICE_SOUND)
+			self.play_sound(MULTIPLE_CHOICE_SOUND)
 			self.routes.SetFocus()
 		else:
 			self.output_area.SetFocus()
@@ -569,5 +612,5 @@ app = wx.App(redirect=False)
 window = MainFrame(None, title=APP_NAME, size=(WINDOW_WIDTH, WINDOW_HEIGHT))
 app.SetTopWindow(window)
 window.Center()
-window.ShowFullScreen(True,wx.FULLSCREEN_NOTOOLBAR)
+window.ShowFullScreen(True, wx.FULLSCREEN_NOTOOLBAR)
 app.MainLoop()
