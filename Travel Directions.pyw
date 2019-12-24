@@ -14,6 +14,7 @@ from threading import Thread
 
 # Third-party modules:
 from bs4 import BeautifulSoup
+import certifi
 import dateutil.tz
 import googlemaps
 from googlemaps.exceptions import ApiError, HTTPError, Timeout, TransportError
@@ -37,7 +38,7 @@ except ImportError:
 try:
 	if sys.frozen or sys.importers:
 		CURRENT_DIRECTORY = os.path.dirname(sys.executable)
-		os.environ['REQUESTS_CA_BUNDLE'] = os.path.join(CURRENT_DIRECTORY, "cacert.pem")
+		os.environ['REQUESTS_CA_BUNDLE'] = certifi.where()
 except AttributeError:
 	CURRENT_DIRECTORY = os.path.dirname(os.path.realpath(__file__))
 
