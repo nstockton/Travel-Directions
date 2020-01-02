@@ -120,8 +120,15 @@ class MainFrame(wx.Frame):
 			label="Avoid F&erries",
 			style=wx.CHK_2STATE | wx.ALIGN_RIGHT
 		)
+		self.avoid_indoor = wx.CheckBox(
+			self.panel,
+			wx.ID_ANY,
+			label="Avoid I&ndoor Steps",
+			style=wx.CHK_2STATE | wx.ALIGN_RIGHT
+		)
 		self.label_depart_arrive = wx.StaticText(self.panel, wx.ID_ANY, "Type:")
-		self.depart_arrive = wx.Choice(self.panel, wx.ID_ANY, choices=["Depart after", "Arrive By"])
+		self.depart_arrive = wx.Choice(self.panel, wx.ID_ANY, choices=["Depart Now", "Depart After", "Arrive By"])
+		self.depart_arrive.Bind(wx.EVT_CHOICE, self.on_depart_arrive_changed, self.depart_arrive)
 		self.label_depart_arrive.Disable()
 		self.depart_arrive.Disable()
 		self.label_months = wx.StaticText(self.panel, wx.ID_ANY, "Date:")
@@ -176,7 +183,7 @@ class MainFrame(wx.Frame):
 		self.routes.Bind(wx.EVT_CHOICE, self.on_route_changed, self.routes)
 		self.label_routes.Disable()
 		self.routes.Disable()
-		self.label_output_area = wx.StaticText(self.panel, wx.ID_ANY, "Result &Details:")
+		self.label_output_area = wx.StaticText(self.panel, wx.ID_ANY, "Result Detai&ls:")
 		self.output_area = wx.TextCtrl(
 			self.panel,
 			wx.ID_ANY,
@@ -195,11 +202,12 @@ class MainFrame(wx.Frame):
 		self.waypoints_sizer = wx.BoxSizer()
 		self.waypoints_sizer.Add(self.label_waypoints_area)
 		self.waypoints_sizer.Add(self.waypoints_area, proportion=1, border=1)
-		self.non_transit_sizer = wx.BoxSizer()
-		self.non_transit_sizer.Add(self.optimize_waypoints, proportion=0, border=1)
-		self.non_transit_sizer.Add(self.avoid_highways, proportion=0, border=1)
-		self.non_transit_sizer.Add(self.avoid_tolls, proportion=0, border=1)
-		self.non_transit_sizer.Add(self.avoid_ferries, proportion=0, border=1)
+		self.avoid_sizer = wx.BoxSizer()
+		self.avoid_sizer.Add(self.optimize_waypoints, proportion=0, border=1)
+		self.avoid_sizer.Add(self.avoid_highways, proportion=0, border=1)
+		self.avoid_sizer.Add(self.avoid_tolls, proportion=0, border=1)
+		self.avoid_sizer.Add(self.avoid_ferries, proportion=0, border=1)
+		self.avoid_sizer.Add(self.avoid_indoor, proportion=0, border=1)
 		self.modes_sizer = wx.BoxSizer()
 		self.modes_sizer.Add(self.label_modes)
 		self.modes_sizer.Add(self.modes, proportion=0, flag=wx.EXPAND, border=0)
@@ -234,7 +242,7 @@ class MainFrame(wx.Frame):
 		self.entry_sizer.Add(self.destination_sizer, proportion=0, flag=wx.EXPAND | wx.TOP, border=1)
 		self.entry_sizer.Add(self.modes_sizer, proportion=0, flag=wx.EXPAND | wx.TOP, border=15)
 		self.entry_sizer.Add(self.waypoints_sizer, proportion=0, flag=wx.EXPAND | wx.TOP, border=25)
-		self.entry_sizer.Add(self.non_transit_sizer, proportion=0, flag=wx.EXPAND | wx.TOP, border=5)
+		self.entry_sizer.Add(self.avoid_sizer, proportion=0, flag=wx.EXPAND | wx.TOP, border=5)
 		self.entry_sizer.Add(self.depart_arrive_sizer, proportion=0, flag=wx.EXPAND | wx.TOP, border=25)
 		self.entry_sizer.Add(self.date_time_sizer, proportion=0, flag=wx.EXPAND | wx.TOP, border=10)
 		self.entry_sizer.Add(self.transit_preferences_sizer, proportion=0, flag=wx.EXPAND | wx.TOP, border=10)
@@ -379,10 +387,32 @@ class MainFrame(wx.Frame):
 			self.avoid_highways.Disable()
 			self.avoid_tolls.Disable()
 			self.avoid_ferries.Disable()
-			now = datetime.now()
 			self.depart_arrive.SetSelection(0)
 			self.label_depart_arrive.Enable()
 			self.depart_arrive.Enable()
+			self.transit_mode.SetSelection(0)
+			self.label_transit_mode.Enable()
+			self.transit_mode.Enable()
+			self.transit_routing_preference.SetSelection(0)
+			self.label_transit_routing_preference.Enable()
+			self.transit_routing_preference.Enable()
+		else:
+			self.label_waypoints_area.Enable()
+			self.waypoints_area.Enable()
+			self.optimize_waypoints.Enable()
+			self.avoid_highways.Enable()
+			self.avoid_tolls.Enable()
+			self.avoid_ferries.Enable()
+			self.label_depart_arrive.Disable()
+			self.depart_arrive.Disable()
+			self.label_transit_mode.Disable()
+			self.transit_mode.Disable()
+			self.label_transit_routing_preference.Disable()
+			self.transit_routing_preference.Disable()
+
+	def on_depart_arrive_changed(self, event):
+		if self.depart_arrive.GetSelection():
+			now = datetime.now()
 			self.years.SetValue("{}".format(now.year))
 			self.label_years.Enable()
 			self.years.Enable()
@@ -411,21 +441,7 @@ class MainFrame(wx.Frame):
 			self.minutes.Enable()
 			self.label_am_pm.Enable()
 			self.am_pm.Enable()
-			self.transit_mode.SetSelection(0)
-			self.label_transit_mode.Enable()
-			self.transit_mode.Enable()
-			self.transit_routing_preference.SetSelection(0)
-			self.label_transit_routing_preference.Enable()
-			self.transit_routing_preference.Enable()
 		else:
-			self.label_waypoints_area.Enable()
-			self.waypoints_area.Enable()
-			self.optimize_waypoints.Enable()
-			self.avoid_highways.Enable()
-			self.avoid_tolls.Enable()
-			self.avoid_ferries.Enable()
-			self.label_depart_arrive.Disable()
-			self.depart_arrive.Disable()
 			self.label_months.Disable()
 			self.months.Disable()
 			self.label_days.Disable()
@@ -438,10 +454,6 @@ class MainFrame(wx.Frame):
 			self.minutes.Disable()
 			self.label_am_pm.Disable()
 			self.am_pm.Disable()
-			self.label_transit_mode.Disable()
-			self.transit_mode.Disable()
-			self.label_transit_routing_preference.Disable()
-			self.transit_routing_preference.Disable()
 
 	def on_route_changed(self, event):
 		"""Update the details box when the selection is changed."""
@@ -472,6 +484,8 @@ class MainFrame(wx.Frame):
 			avoid.append("tolls")
 		if self.avoid_ferries.IsChecked():
 			avoid.append("ferries")
+		if self.avoid_indoor.IsChecked():
+			avoid.append("indoor")
 		self.origin_area.Clear()
 		self.destination_area.Clear()
 		self.waypoints_area.Clear()
@@ -479,6 +493,7 @@ class MainFrame(wx.Frame):
 		self.avoid_highways.SetValue(False)
 		self.avoid_tolls.SetValue(False)
 		self.avoid_ferries.SetValue(False)
+		self.avoid_indoor.SetValue(False)
 		self.say("Planning Trip.", True)
 		params = {
 			"origin": origin,
@@ -490,14 +505,27 @@ class MainFrame(wx.Frame):
 			"units": "imperial"  # Can also be "metric".
 		}
 		if mode == "transit":
-			depart_arrive = ("departure_time", "arrival_time")[self.depart_arrive.GetSelection()]
-			dt = self.selected_datetime().replace(tzinfo=self.tz_local).astimezone(self.tz_utc)
-			params[depart_arrive] = calendar.timegm(dt.utctimetuple())
+			if self.depart_arrive.GetSelection():
+				selection = self.depart_arrive.GetSelection() - 1
+				depart_arrive = ("departure_time", "arrival_time")[selection]
+				dt = self.selected_datetime().replace(tzinfo=self.tz_local).astimezone(self.tz_utc)
+				params[depart_arrive] = calendar.timegm(dt.utctimetuple())
+			else:
+				params["departure_time"] = None
+			# Travel Mode:
+			# bus indicates that the calculated route should prefer travel by bus.
+			# subway indicates that the calculated route should prefer travel by subway.
+			# train indicates that the calculated route should prefer travel by train.
+			# tram indicates that the calculated route should prefer travel by tram and light rail.
+			# rail indicates that the calculated route should prefer travel by train, tram, light rail, and subway.
+			# This is equivalent to transit_mode=train|tram|subway.
 			if self.transit_mode.GetSelection():
-				params["transit_mode"] = ("bus", "rail")[self.transit_mode.GetSelection() - 1]
+				selection = self.transit_mode.GetSelection() - 1
+				transit_mode = ("bus", "rail")[selection]
+				params["transit_mode"] = transit_mode
 			if self.transit_routing_preference.GetSelection():
-				selection = self.transit_routing_preference.GetSelection()
-				routing_preference = ("less_walking", "fewer_transfers")[selection - 1]
+				selection = self.transit_routing_preference.GetSelection() - 1
+				routing_preference = ("less_walking", "fewer_transfers")[selection]
 				params["transit_routing_preference"] = routing_preference
 		else:
 			if waypoints:
