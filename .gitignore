@@ -30,6 +30,8 @@ wheels/
 #  before PyInstaller builds the exe, so as to inject date/other infos into it.
 *.manifest
 *.spec
+# Except my spec file.
+!pyinstaller_windows.spec
 
 # Installer logs
 pip-log.txt
@@ -102,4 +104,6 @@ ENV/
 
 # Project specific stuff
 key.py
-Travel\ Directions\ V*/
+Travel_Directions_V*/
+Pipfile.lock
+*.ignore

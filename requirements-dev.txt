@@ -1,0 +1,7 @@
+flake8
+flake8-tabs==2.2.2
+isort==5.7.0
+mypy
+pre-commit
+PyInstaller==4.1
+git+https://github.com/nstockton/tan.git@personal#egg=tan

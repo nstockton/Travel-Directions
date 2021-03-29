@@ -1,7 +1,6 @@
-bs4
+beautifulsoup4
+certifi
 googlemaps
-flake8
-flake8-tabs
 python-dateutil
 pywin32
 requests[security]

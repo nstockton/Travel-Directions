@@ -4,39 +4,54 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-# Built-in modules:
+
+# Future Modules:
+from __future__ import annotations
+
+# Built-in Modules:
 import calendar
 import os.path
-import platform
 import sys
+from contextlib import suppress
 from datetime import datetime
 from threading import Thread
+from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Union
 
-# Third-party modules:
+# Third-party Modules:
 import certifi
 import dateutil.tz
-import googlemaps
-import wx
-import wx.lib.dialogs
-from bs4 import BeautifulSoup
-from googlemaps.exceptions import ApiError, HTTPError, Timeout, TransportError
-from speechlight import speech
-from wx.adv import Sound, SOUND_ASYNC
+import googlemaps  # type: ignore[import]
+import wx  # type: ignore[import]
+import wx.lib.dialogs  # type: ignore[import]
+from bs4 import BeautifulSoup  # type: ignore[import]
+from googlemaps.exceptions import ApiError, HTTPError, Timeout, TransportError  # type: ignore[import]
+from speechlight import speech  # type: ignore[import]
+from wx.adv import SOUND_ASYNC, Sound  # type: ignore[import]
 
-# Local modules:
+# Local Modules:
+from . import APP_AUTHOR, APP_AUTHOR_EMAIL, APP_NAME, SYSTEM_PLATFORM
+
+
+if SYSTEM_PLATFORM == "Darwin":
+	from Cocoa import NSSound  # type: ignore[import]
+
+
+API_KEY: Union[str, None]
 try:
 	from key import API_KEY
 except ImportError:
 	API_KEY = None
 
 
-try:
-	if sys.frozen or sys.importers:
-		CURRENT_DIRECTORY = os.path.dirname(sys.executable)
-		os.environ['REQUESTS_CA_BUNDLE'] = certifi.where()
-except AttributeError:
-	CURRENT_DIRECTORY = os.path.dirname(os.path.realpath(__file__))
+CURRENT_DIRECTORY: str
+if hasattr(sys, "frozen") or hasattr(sys, "importers"):
+	CURRENT_DIRECTORY = os.path.realpath(os.path.dirname(sys.executable))
+	os.environ["REQUESTS_CA_BUNDLE"] = certifi.where()
+else:
+	CURRENT_DIRECTORY = os.path.realpath(os.path.join(os.path.dirname(__file__), os.pardir))
 
+
+MULTIPLE_CHOICE_SOUND: Union[str, None]
 try:
 	MULTIPLE_CHOICE_SOUND = os.path.join(CURRENT_DIRECTORY, "sounds/multiple_choice.wav")
 	with open(MULTIPLE_CHOICE_SOUND, "rb"):
@@ -44,22 +59,12 @@ try:
 except IOError:
 	MULTIPLE_CHOICE_SOUND = None
 
-SYSTEM_PLATFORM = platform.system()
-if SYSTEM_PLATFORM == "Darwin":
-	from Cocoa import NSSound
 
-HTML_PARSER = "html.parser"
+WINDOW_WIDTH: int = 600
+WINDOW_HEIGHT: int = 480
 
-APP_NAME = "Travel Directions"
-APP_VERSION = "1.1"
-AUTHOR = "Nick Stockton"
-AUTHOR_EMAIL = "nstockton@gmail.com"
-WINDOW_WIDTH = 600
-WINDOW_HEIGHT = 480
-
-ABOUT_TEXT = f"""
-{APP_NAME} (V{APP_VERSION})
-By {AUTHOR} <{AUTHOR_EMAIL}>
+ABOUT_TEXT: str = f"""
+By {APP_AUTHOR} <{APP_AUTHOR_EMAIL}>
 
 Binaries of this product have been made available to you under the Mozilla Public License 2.0 (MPL).
 You can obtain a copy of the MPL at http://mozilla.org/MPL/2.0/.
@@ -68,9 +73,12 @@ If you did not receive a copy of the product source code, please send a request
 to the person or persons from which you obtained these product binaries.
 """.lstrip()
 
+HTML_PARSER: str = "html.parser"
 
-class MainFrame(wx.Frame):
-	def __init__(self, *args, **kwargs):
+
+class MainFrame(wx.Frame):  # type: ignore[misc, no-any-unimported]
+	def __init__(self, version: str, *args: Any, **kwargs: Any) -> None:
+		self.app_version = version
 		super().__init__(*args, **kwargs)
 		self.menu_bar = wx.MenuBar()
 		self.SetMenuBar(self.menu_bar)
@@ -94,37 +102,24 @@ class MainFrame(wx.Frame):
 		self.label_waypoints_area = wx.StaticText(self.panel, wx.ID_ANY, "&Waypoints:")
 		self.waypoints_area = wx.TextCtrl(self.panel, wx.ID_ANY, style=wx.TE_NOHIDESEL)
 		self.optimize_waypoints = wx.CheckBox(
-			self.panel,
-			wx.ID_ANY,
-			label="Optimi&ze Waypoints",
-			style=wx.CHK_2STATE | wx.ALIGN_RIGHT
+			self.panel, wx.ID_ANY, label="Optimi&ze Waypoints", style=wx.CHK_2STATE | wx.ALIGN_RIGHT
 		)
 		self.avoid_highways = wx.CheckBox(
-			self.panel,
-			wx.ID_ANY,
-			label="Avoid H&ighways",
-			style=wx.CHK_2STATE | wx.ALIGN_RIGHT
+			self.panel, wx.ID_ANY, label="Avoid H&ighways", style=wx.CHK_2STATE | wx.ALIGN_RIGHT
 		)
 		self.avoid_tolls = wx.CheckBox(
-			self.panel,
-			wx.ID_ANY,
-			label="Avoid &Toll Roads",
-			style=wx.CHK_2STATE | wx.ALIGN_RIGHT
+			self.panel, wx.ID_ANY, label="Avoid &Toll Roads", style=wx.CHK_2STATE | wx.ALIGN_RIGHT
 		)
 		self.avoid_ferries = wx.CheckBox(
-			self.panel,
-			wx.ID_ANY,
-			label="Avoid F&erries",
-			style=wx.CHK_2STATE | wx.ALIGN_RIGHT
+			self.panel, wx.ID_ANY, label="Avoid F&erries", style=wx.CHK_2STATE | wx.ALIGN_RIGHT
 		)
 		self.avoid_indoor = wx.CheckBox(
-			self.panel,
-			wx.ID_ANY,
-			label="Avoid I&ndoor Steps",
-			style=wx.CHK_2STATE | wx.ALIGN_RIGHT
+			self.panel, wx.ID_ANY, label="Avoid I&ndoor Steps", style=wx.CHK_2STATE | wx.ALIGN_RIGHT
 		)
 		self.label_depart_arrive = wx.StaticText(self.panel, wx.ID_ANY, "Type:")
-		self.depart_arrive = wx.Choice(self.panel, wx.ID_ANY, choices=["Depart Now", "Depart After", "Arrive By"])
+		self.depart_arrive = wx.Choice(
+			self.panel, wx.ID_ANY, choices=["Depart Now", "Depart After", "Arrive By"]
+		)
 		self.depart_arrive.Bind(wx.EVT_CHOICE, self.on_depart_arrive_changed, self.depart_arrive)
 		self.label_depart_arrive.Disable()
 		self.depart_arrive.Disable()
@@ -146,7 +141,9 @@ class MainFrame(wx.Frame):
 		self.label_years.Disable()
 		self.years.Disable()
 		self.label_hours = wx.StaticText(self.panel, wx.ID_ANY, "At:")
-		self.hours = wx.Choice(self.panel, wx.ID_ANY, choices=[str(i) for i in range(1, 13)], style=wx.WANTS_CHARS)
+		self.hours = wx.Choice(
+			self.panel, wx.ID_ANY, choices=[str(i) for i in range(1, 13)], style=wx.WANTS_CHARS
+		)
 		self.hours.Bind(wx.EVT_CHOICE, self.on_date_changed, self.hours)
 		self.hours.Bind(wx.EVT_KEY_DOWN, self.on_date_key_press)
 		self.label_hours.Disable()
@@ -162,14 +159,14 @@ class MainFrame(wx.Frame):
 		self.label_am_pm.Disable()
 		self.am_pm.Disable()
 		self.label_transit_mode = wx.StaticText(self.panel, wx.ID_ANY, "Travel By:")
-		self.transit_mode = wx.Choice(self.panel, wx.ID_ANY, choices=["Bus And Rail", "Bus Only", "Rail Only"])
+		self.transit_mode = wx.Choice(
+			self.panel, wx.ID_ANY, choices=["Bus And Rail", "Bus Only", "Rail Only"]
+		)
 		self.label_transit_mode.Disable()
 		self.transit_mode.Disable()
 		self.label_transit_routing_preference = wx.StaticText(self.panel, wx.ID_ANY, "Routing Preference:")
 		self.transit_routing_preference = wx.Choice(
-			self.panel,
-			wx.ID_ANY,
-			choices=["Best", "Less Walking", "Fewer Transfers"]
+			self.panel, wx.ID_ANY, choices=["Best", "Less Walking", "Fewer Transfers"]
 		)
 		self.label_transit_routing_preference.Disable()
 		self.transit_routing_preference.Disable()
@@ -182,9 +179,7 @@ class MainFrame(wx.Frame):
 		self.routes.Disable()
 		self.label_output_area = wx.StaticText(self.panel, wx.ID_ANY, "Result Detai&ls:")
 		self.output_area = wx.TextCtrl(
-			self.panel,
-			wx.ID_ANY,
-			style=wx.TE_READONLY | wx.TE_MULTILINE | wx.TE_NOHIDESEL
+			self.panel, wx.ID_ANY, style=wx.TE_READONLY | wx.TE_MULTILINE | wx.TE_NOHIDESEL
 		)
 		self.output_area.SetBackgroundColour("Black")
 		self.output_area.SetForegroundColour("White")
@@ -228,7 +223,9 @@ class MainFrame(wx.Frame):
 		self.transit_preferences_sizer.Add(self.label_transit_mode)
 		self.transit_preferences_sizer.Add(self.transit_mode, proportion=0, flag=wx.EXPAND, border=0)
 		self.transit_preferences_sizer.Add(self.label_transit_routing_preference)
-		self.transit_preferences_sizer.Add(self.transit_routing_preference, proportion=0, flag=wx.EXPAND, border=0)
+		self.transit_preferences_sizer.Add(
+			self.transit_routing_preference, proportion=0, flag=wx.EXPAND, border=0
+		)
 		self.routes_sizer = wx.BoxSizer()
 		self.routes_sizer.Add(self.label_routes)
 		self.routes_sizer.Add(self.routes, proportion=1, flag=wx.EXPAND, border=1)
@@ -257,79 +254,83 @@ class MainFrame(wx.Frame):
 		self.panel.SetSizer(self.main_sizer)
 		self.Show()
 		self.status_bar.SetStatusText(" ")
-		rkwargs = {}
-		if API_KEY is not None and isinstance(API_KEY, str) and API_KEY.strip():
+		rkwargs: Dict[str, Any] = {}
+		if API_KEY is not None:
 			self.gmaps = googlemaps.Client(key=API_KEY, timeout=20, requests_kwargs=rkwargs)
 		else:
 			self.notify("error", "API key not found. See the ReadMe for instructions on how to obtain one.")
-			return self.Destroy()
+			self.Destroy()
+			return None
 		self.tz_utc = dateutil.tz.tzutc()
 		self.tz_local = dateutil.tz.tzlocal()
-		self.results = []
+		self.results: List[str] = []
 
-	def menu_bind(self, item, handler):
+	def menu_bind(self, item: Any, handler: Callable[[Any], None]) -> None:
 		self.Bind(wx.EVT_MENU, handler, item)
 
-	def notify(self, msg_type, msg_text, msg_title=""):
+	def notify(self, msg_type: str, msg_text: str, msg_title: str = "") -> Union[bool, None]:
 		"""Display a notification to the user."""
 		if not msg_title:
 			msg_title = msg_type.capitalize()
 		if msg_type == "question":
 			notify_box = wx.MessageDialog(
-				self,
-				message=msg_text,
-				caption=msg_title,
-				style=wx.ICON_QUESTION | wx.YES_NO
+				self, message=msg_text, caption=msg_title, style=wx.ICON_QUESTION | wx.YES_NO
 			)
-			modal = notify_box.ShowModal()
+			modal: int = notify_box.ShowModal()
 			notify_box.Destroy()
-			return modal == wx.ID_YES
+			return modal == int(wx.ID_YES)
 		elif msg_type == "error":
-			notify_box = wx.MessageDialog(self, message=msg_text, caption=msg_title, style=wx.ICON_ERROR | wx.OK)
+			notify_box = wx.MessageDialog(
+				self, message=msg_text, caption=msg_title, style=wx.ICON_ERROR | wx.OK
+			)
 		elif msg_type == "information":
-			notify_box = wx.MessageDialog(self, message=msg_text, caption=msg_title, style=wx.ICON_INFORMATION | wx.OK)
+			notify_box = wx.MessageDialog(
+				self, message=msg_text, caption=msg_title, style=wx.ICON_INFORMATION | wx.OK
+			)
 		elif msg_type == "scrolled":
 			notify_box = wx.lib.dialogs.ScrolledMessageDialog(self, msg_text, msg_title)
 		if notify_box.ShowModal() == wx.ID_OK:
 			notify_box.Destroy()
+		return None
 
-	def play_sound(self, filename=None):
+	def play_sound(self, filename: Optional[str] = None) -> None:
 		if filename is None:
-			return
+			return None
 		elif SYSTEM_PLATFORM == "Darwin":
 			# Use Cocoa for playing sounds on Mac.
 			sound = NSSound.alloc()
 			sound.initWithContentsOfFile_byReference_(filename, True)
 			sound.play()
 		else:
-			try:
+			with suppress(NotImplementedError):
 				snd = Sound()
 				if snd.Create(filename):
 					snd.Play(SOUND_ASYNC)
-			except NotImplementedError:
-				# Sound support not implemented on this platform.
-				pass
 
-	def on_about(self, event):
+	def on_about(self, event: Any) -> None:
 		"""Displays the about dialog."""
-		self.notify("scrolled", ABOUT_TEXT, "About {}".format(APP_NAME))
+		self.notify(
+			"scrolled",
+			f"{APP_NAME} ({self.app_version})\n{ABOUT_TEXT}",
+			f"About {APP_NAME}",
+		)
 
-	def on_exit(self, event):
+	def on_exit(self, event: Any) -> None:
 		"""Exits the program."""
 		self.Destroy()
 
-	def selected_datetime(self):
+	def selected_datetime(self) -> datetime:
 		"""Returns a datetime object with the currently selected values on the GUI"""
-		year = int(self.years.GetValue())
-		month = self.months.GetSelection() + 1
-		day = self.days.GetSelection() + 1
-		hour = ((self.hours.GetSelection() + 1) % 12) + self.am_pm.GetSelection() * 12
-		minute = self.minutes.GetSelection()
+		year: int = int(self.years.GetValue())
+		month: int = self.months.GetSelection() + 1
+		day: int = self.days.GetSelection() + 1
+		hour: int = ((self.hours.GetSelection() + 1) % 12) + self.am_pm.GetSelection() * 12
+		minute: int = self.minutes.GetSelection()
 		return datetime(year, month, day, hour, minute)
 
-	def on_date_changed(self, event):
+	def on_date_changed(self, event: Any) -> None:
 		event_object = event.GetEventObject()
-		previously_selected_day = self.days.GetSelection()
+		previously_selected_day: int = self.days.GetSelection()
 		if event_object is self.months:
 			# If a new month has been selected, reset the day to the 1st of the month.
 			# If this is not done before a datetime object for the selected date is
@@ -340,24 +341,25 @@ class MainFrame(wx.Frame):
 		selected = self.selected_datetime()
 		# If the month, day, or hour selected by the user is in the present or future, use
 		# the current year. Otherwise, use the year following current.
+		year: int
 		if (selected.month, selected.day, selected.hour) >= (now.month, now.day, now.hour):
 			year = now.year
 		else:
 			year = now.year + 1
 		self.years.SetValue(str(year))
 		if event_object is self.months:
-			month = event.GetSelection() + 1
-			max_days = calendar.monthrange(year, month)[1]
+			month: int = event.GetSelection() + 1
+			max_days: int = calendar.monthrange(year, month)[1]
 			self.days.SetItems(["{:02d}".format(i) for i in range(1, max_days + 1)])
 			if previously_selected_day < max_days:
 				self.days.SetSelection(previously_selected_day)
 			else:
 				self.days.SetSelection(max_days - 1)
 
-	def on_date_key_press(self, event):
+	def on_date_key_press(self, event: Any) -> None:
 		event_object = event.GetEventObject()
-		key_code = event.GetKeyCode()
-		modifiers = event.GetModifiers()
+		key_code: int = event.GetKeyCode()
+		modifiers: int = event.GetModifiers()
 		if not modifiers and key_code in (wx.WXK_TAB, wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER):
 			if event_object is self.days:
 				self.years.SetFocus()
@@ -371,7 +373,7 @@ class MainFrame(wx.Frame):
 		else:
 			event.Skip()
 
-	def on_mode_changed(self, event):
+	def on_mode_changed(self, event: Any) -> None:
 		if self.modes.GetString(self.modes.GetSelection()) == "Transit":
 			self.label_waypoints_area.Disable()
 			self.waypoints_area.Disable()
@@ -402,7 +404,7 @@ class MainFrame(wx.Frame):
 			self.label_transit_routing_preference.Disable()
 			self.transit_routing_preference.Disable()
 
-	def on_depart_arrive_changed(self, event):
+	def on_depart_arrive_changed(self, event: Any) -> None:
 		if self.depart_arrive.GetSelection():
 			now = datetime.now()
 			self.years.SetValue("{}".format(now.year))
@@ -411,12 +413,12 @@ class MainFrame(wx.Frame):
 			self.months.SetSelection(now.month - 1)
 			self.label_months.Enable()
 			self.months.Enable()
-			max_days = calendar.monthrange(now.year, now.month)[1]
+			max_days: int = calendar.monthrange(now.year, now.month)[1]
 			self.days.SetItems(["{:02d}".format(i) for i in range(1, max_days + 1)])
 			self.days.SetSelection(now.day - 1)
 			self.label_days.Enable()
 			self.days.Enable()
-			hour = now.hour
+			hour: int = now.hour
 			if hour < 12:
 				if hour == 0:
 					hour = 12
@@ -447,12 +449,12 @@ class MainFrame(wx.Frame):
 			self.label_am_pm.Disable()
 			self.am_pm.Disable()
 
-	def on_route_changed(self, event):
+	def on_route_changed(self, event: Any) -> None:
 		"""Update the details box when the selection is changed."""
-		i = event.GetSelection()
+		i: int = event.GetSelection()
 		self.output_area.SetValue(self.results[i])
 
-	def on_search(self, event):
+	def on_search(self, event: Any) -> None:
 		"""Performs a directions search."""
 		self.results.clear()
 		self.label_routes.Disable()
@@ -461,15 +463,16 @@ class MainFrame(wx.Frame):
 		self.label_output_area.Disable()
 		self.output_area.Disable()
 		self.output_area.Clear()
-		origin = self.origin_area.GetValue().strip()
-		destination = self.destination_area.GetValue().strip()
+		origin: str = self.origin_area.GetValue().strip()
+		destination: str = self.destination_area.GetValue().strip()
 		if not origin or not destination:
-			return self.notify("error", "You must supply a starting location and a destination.")
-		mode = self.modes.GetString(self.modes.GetSelection()).lower()
-		waypoints = [point.strip() for point in self.waypoints_area.GetValue().split("|")]
+			self.notify("error", "You must supply a starting location and a destination.")
+			return None
+		mode: str = self.modes.GetString(self.modes.GetSelection()).lower()
+		waypoints: List[str] = [point.strip() for point in self.waypoints_area.GetValue().split("|")]
 		if waypoints:
-			optimize_waypoints = self.optimize_waypoints.IsChecked()
-		avoid = []
+			optimize_waypoints: bool = self.optimize_waypoints.IsChecked()
+		avoid: List[str] = []
 		if self.avoid_highways.IsChecked():
 			avoid.append("highways")
 		if self.avoid_tolls.IsChecked():
@@ -487,19 +490,20 @@ class MainFrame(wx.Frame):
 		self.avoid_ferries.SetValue(False)
 		self.avoid_indoor.SetValue(False)
 		speech.say("Planning Trip.", True)
-		params = {
+		params: Dict[str, Any] = {
 			"origin": origin,
 			"destination": destination,
 			"mode": mode,
 			"alternatives": True,
 			"language": "en",
 			"region": "us",
-			"units": "imperial"  # Can also be "metric".
+			"units": "imperial",  # Can also be "metric".
 		}
 		if mode == "transit":
+			selection: int
 			if self.depart_arrive.GetSelection():
 				selection = self.depart_arrive.GetSelection() - 1
-				depart_arrive = ("departure_time", "arrival_time")[selection]
+				depart_arrive: str = ("departure_time", "arrival_time")[selection]
 				dt = self.selected_datetime().replace(tzinfo=self.tz_local).astimezone(self.tz_utc)
 				params[depart_arrive] = calendar.timegm(dt.utctimetuple())
 			else:
@@ -513,11 +517,11 @@ class MainFrame(wx.Frame):
 			# This is equivalent to transit_mode=train|tram|subway.
 			if self.transit_mode.GetSelection():
 				selection = self.transit_mode.GetSelection() - 1
-				transit_mode = ("bus", "rail")[selection]
+				transit_mode: str = ("bus", "rail")[selection]
 				params["transit_mode"] = transit_mode
 			if self.transit_routing_preference.GetSelection():
 				selection = self.transit_routing_preference.GetSelection() - 1
-				routing_preference = ("less_walking", "fewer_transfers")[selection]
+				routing_preference: str = ("less_walking", "fewer_transfers")[selection]
 				params["transit_routing_preference"] = routing_preference
 		else:
 			if waypoints:
@@ -527,21 +531,22 @@ class MainFrame(wx.Frame):
 				params["avoid"] = avoid
 		self.modes.SetSelection(0)
 		self.on_mode_changed(event.GetEventObject())
-		t = Thread(target=self._retrieve, kwargs=params)
+		t: Thread = Thread(target=self._retrieve, kwargs=params)
 		t.start()
 
-	def _retrieve(self, **params):
+	def _retrieve(self, **kwargs: Any) -> None:
 		try:
-			response = self.gmaps.directions(**params)
+			response = self.gmaps.directions(**kwargs)
 		except Timeout:
-			return self.notify("error", "The server failed to respond.")
+			self.notify("error", "The server failed to respond.")
 		except (ApiError, HTTPError, TransportError) as e:
-			return self.notify("error", e.message)
-		wx.CallAfter(self._process_results, response)
+			self.notify("error", e.message)
+		else:
+			wx.CallAfter(self._process_results, response)
 
-	def _process_leg(self, leg):
-		result = []
-		text = []
+	def _process_leg(self, leg: Mapping[str, Any]) -> List[str]:
+		result: List[str] = []
+		text: List[str] = []
 		result.append(f"From: {leg['start_address']}\nTo: {leg['end_address']}")
 		if "distance" in leg:
 			text.append(f"Total Distance: {leg['distance']['text']}")
@@ -555,12 +560,12 @@ class MainFrame(wx.Frame):
 			result.append(f"Arriving: {leg['arrival_time']['text']}")
 		return result
 
-	def _process_step(self, step):
-		result = []
-		text = []
-		transit_details = step.get("transit_details", {})
-		line = transit_details.get("line", {})
-		vehicle = line.get("vehicle", {})
+	def _process_step(self, step: Mapping[str, Any]) -> List[str]:
+		result: List[str] = []
+		text: List[str] = []
+		transit_details: Dict[str, Any] = step.get("transit_details", {})
+		line: Dict[str, Any] = transit_details.get("line", {})
+		vehicle: Dict[str, Any] = line.get("vehicle", {})
 		if "departure_time" in transit_details:
 			text.append(f"At {transit_details['departure_time']['text']},")
 		if "short_name" in line or "name" in line:
@@ -575,7 +580,7 @@ class MainFrame(wx.Frame):
 		if "num_stops" in transit_details:
 			text.append(f"\nTravel {transit_details['num_stops']} stops,")
 		if step["travel_mode"] != "TRANSIT" and "html_instructions" in step:
-			html_instructions = step["html_instructions"].replace("<b>", "").replace("</b>", "")
+			html_instructions: str = step["html_instructions"].replace("<b>", "").replace("</b>", "")
 			text.append("\n".join(BeautifulSoup(html_instructions, HTML_PARSER).findAll(text=True)))
 			result.append(" ".join(text).capitalize())
 			text.clear()
@@ -594,16 +599,14 @@ class MainFrame(wx.Frame):
 			result.append(" ".join(text).capitalize())
 		return result
 
-	def _process_sub_step(self, sub_step):
-		text = []
-		result = []
+	def _process_sub_step(self, sub_step: Mapping[str, Any]) -> List[str]:
+		result: List[str] = []
+		text: List[str] = []
 		if "html_instructions" in sub_step:
-			html_instructions = sub_step["html_instructions"].replace("<b>", "").replace("</b>", "")
+			html_instructions: str = sub_step["html_instructions"].replace("<b>", "").replace("</b>", "")
 			result.append(
 				"* "
-				+ "\n* ".join(
-					BeautifulSoup(html_instructions, HTML_PARSER).findAll(text=True)
-				).capitalize()
+				+ "\n* ".join(BeautifulSoup(html_instructions, HTML_PARSER).findAll(text=True)).capitalize()
 			)
 			if "distance" in sub_step:
 				text.append(f"Travel {sub_step['distance']['text']}")
@@ -613,8 +616,9 @@ class MainFrame(wx.Frame):
 				result.append("* " + " ".join(text).capitalize())
 		return result
 
-	def _process_results(self, response):
-		summaries = []
+	def _process_results(self, response: Sequence[Any]) -> None:
+		summaries: List[str] = []
+		details: List[str]
 		for route_counter, route in enumerate(response):
 			summaries.append(f"Route {route_counter + 1}")
 			details = []
@@ -630,7 +634,7 @@ class MainFrame(wx.Frame):
 			self.results.append("\n".join(details).strip())
 		speech.say(f"{len(self.results)} Route{'' if len(self.results) == 1 else 's'} found.")
 		if not self.results:
-			return
+			return None
 		self.routes.SetItems(summaries)
 		self.routes.SetSelection(0)
 		self.output_area.SetValue(self.results[0])
@@ -645,9 +649,10 @@ class MainFrame(wx.Frame):
 			self.output_area.SetFocus()
 
 
-app = wx.App(redirect=False)
-window = MainFrame(None, title=APP_NAME, size=(WINDOW_WIDTH, WINDOW_HEIGHT))
-app.SetTopWindow(window)
-window.Center()
-window.ShowFullScreen(True, wx.FULLSCREEN_NOTOOLBAR)
-app.MainLoop()
+def main(version: str) -> None:
+	app = wx.App(redirect=False)
+	window = MainFrame(version, None, title=APP_NAME, size=(WINDOW_WIDTH, WINDOW_HEIGHT))
+	app.SetTopWindow(window)
+	window.Center()
+	window.ShowFullScreen(True, wx.FULLSCREEN_NOTOOLBAR)
+	app.MainLoop()
