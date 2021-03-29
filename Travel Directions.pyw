@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -6,24 +6,21 @@
 
 # Built-in modules:
 import calendar
-from datetime import datetime
 import os.path
 import platform
 import sys
+from datetime import datetime
 from threading import Thread
 
 # Third-party modules:
-from bs4 import BeautifulSoup
 import certifi
 import dateutil.tz
 import googlemaps
-from googlemaps.exceptions import ApiError, HTTPError, Timeout, TransportError
-try:
-	from speechlight import Speech
-except ImportError:
-	Speech = None
 import wx
 import wx.lib.dialogs
+from bs4 import BeautifulSoup
+from googlemaps.exceptions import ApiError, HTTPError, Timeout, TransportError
+from speechlight import speech
 from wx.adv import Sound, SOUND_ASYNC
 
 # Local modules:
@@ -266,11 +263,6 @@ class MainFrame(wx.Frame):
 		else:
 			self.notify("error", "API key not found. See the ReadMe for instructions on how to obtain one.")
 			return self.Destroy()
-		if Speech is not None:
-			self.speech = Speech()
-			self.say = self.speech.say
-		else:
-			self.say = lambda *args, **kwargs: None
 		self.tz_utc = dateutil.tz.tzutc()
 		self.tz_local = dateutil.tz.tzlocal()
 		self.results = []
@@ -494,7 +486,7 @@ class MainFrame(wx.Frame):
 		self.avoid_tolls.SetValue(False)
 		self.avoid_ferries.SetValue(False)
 		self.avoid_indoor.SetValue(False)
-		self.say("Planning Trip.", True)
+		speech.say("Planning Trip.", True)
 		params = {
 			"origin": origin,
 			"destination": destination,
@@ -636,7 +628,7 @@ class MainFrame(wx.Frame):
 				details.append("")
 				details.append("\n".join(route["warnings"]))
 			self.results.append("\n".join(details).strip())
-		self.say(f"{len(self.results)} Route{'' if len(self.results) == 1 else 's'} found.")
+		speech.say(f"{len(self.results)} Route{'' if len(self.results) == 1 else 's'} found.")
 		if not self.results:
 			return
 		self.routes.SetItems(summaries)

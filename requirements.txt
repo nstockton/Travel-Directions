@@ -5,6 +5,5 @@ flake8-tabs
 python-dateutil
 pywin32
 requests[security]
+speechlight
 wxpython
-#git+https://github.com/nstockton/speechlight.git#egg=speechlight
-https://github.com/nstockton/speechlight/archive/master.zip
