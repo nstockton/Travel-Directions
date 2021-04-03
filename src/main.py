@@ -104,18 +104,23 @@ class MainFrame(wx.Frame):  # type: ignore[misc, no-any-unimported]
 		self.optimize_waypoints = wx.CheckBox(
 			self.panel, wx.ID_ANY, label="Optimi&ze Waypoints", style=wx.CHK_2STATE | wx.ALIGN_RIGHT
 		)
+		self.optimize_waypoints.SetForegroundColour(None)
 		self.avoid_highways = wx.CheckBox(
 			self.panel, wx.ID_ANY, label="Avoid H&ighways", style=wx.CHK_2STATE | wx.ALIGN_RIGHT
 		)
+		self.avoid_highways.SetForegroundColour(None)
 		self.avoid_tolls = wx.CheckBox(
 			self.panel, wx.ID_ANY, label="Avoid &Toll Roads", style=wx.CHK_2STATE | wx.ALIGN_RIGHT
 		)
+		self.avoid_tolls.SetForegroundColour(None)
 		self.avoid_ferries = wx.CheckBox(
 			self.panel, wx.ID_ANY, label="Avoid F&erries", style=wx.CHK_2STATE | wx.ALIGN_RIGHT
 		)
+		self.avoid_ferries.SetForegroundColour(None)
 		self.avoid_indoor = wx.CheckBox(
 			self.panel, wx.ID_ANY, label="Avoid I&ndoor Steps", style=wx.CHK_2STATE | wx.ALIGN_RIGHT
 		)
+		self.avoid_indoor.SetForegroundColour(None)
 		self.label_depart_arrive = wx.StaticText(self.panel, wx.ID_ANY, "Type:")
 		self.depart_arrive = wx.Choice(
 			self.panel, wx.ID_ANY, choices=["Depart Now", "Depart After", "Arrive By"]
