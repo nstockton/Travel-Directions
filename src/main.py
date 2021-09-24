@@ -20,20 +20,20 @@ from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Union
 # Third-party Modules:
 import certifi
 import dateutil.tz
-import googlemaps  # type: ignore[import]
-import wx  # type: ignore[import]
-import wx.lib.dialogs  # type: ignore[import]
-from bs4 import BeautifulSoup  # type: ignore[import]
-from googlemaps.exceptions import ApiError, HTTPError, Timeout, TransportError  # type: ignore[import]
-from speechlight import speech  # type: ignore[import]
-from wx.adv import SOUND_ASYNC, Sound  # type: ignore[import]
+import googlemaps
+import wx
+import wx.lib.dialogs
+from bs4 import BeautifulSoup
+from googlemaps.exceptions import ApiError, HTTPError, Timeout, TransportError
+from speechlight import speech
+from wx.adv import SOUND_ASYNC, Sound
 
 # Local Modules:
 from . import APP_AUTHOR, APP_AUTHOR_EMAIL, APP_NAME, SYSTEM_PLATFORM
 
 
 if SYSTEM_PLATFORM == "Darwin":
-	from Cocoa import NSSound  # type: ignore[import]
+	from Cocoa import NSSound
 
 
 API_KEY: Union[str, None]
@@ -586,7 +586,9 @@ class MainFrame(wx.Frame):  # type: ignore[misc, no-any-unimported]
 			text.append(f"\nTravel {transit_details['num_stops']} stops,")
 		if step["travel_mode"] != "TRANSIT" and "html_instructions" in step:
 			html_instructions: str = step["html_instructions"].replace("<b>", "").replace("</b>", "")
-			text.append("\n".join(BeautifulSoup(html_instructions, HTML_PARSER).findAll(text=True)))
+			text.append(
+				"\n".join(str(i) for i in BeautifulSoup(html_instructions, HTML_PARSER).findAll(text=True))
+			)
 			result.append(" ".join(text).capitalize())
 			text.clear()
 		if "distance" in step:
@@ -611,7 +613,9 @@ class MainFrame(wx.Frame):  # type: ignore[misc, no-any-unimported]
 			html_instructions: str = sub_step["html_instructions"].replace("<b>", "").replace("</b>", "")
 			result.append(
 				"* "
-				+ "\n* ".join(BeautifulSoup(html_instructions, HTML_PARSER).findAll(text=True)).capitalize()
+				+ "\n* ".join(
+					str(i) for i in BeautifulSoup(html_instructions, HTML_PARSER).findAll(text=True)
+				).capitalize()
 			)
 			if "distance" in sub_step:
 				text.append(f"Travel {sub_step['distance']['text']}")
