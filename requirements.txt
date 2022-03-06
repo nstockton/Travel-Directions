@@ -3,7 +3,6 @@ certifi
 googlemaps
 pyobjc; platform_system == "Darwin"
 python-dateutil
-pywin32
 requests[security]
 speechlight
 wxpython

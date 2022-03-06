@@ -3,9 +3,9 @@ flake8-tabs==2.3.2
 isort==5.8.0
 mypy
 pre-commit
-PyInstaller==4.1
+PyInstaller==4.7
 pyproject-flake8==0.0.1a2
-git+https://github.com/nstockton/tan.git@personal#egg=tan
+tan==21.14
 types-beautifulsoup4
 types-certifi
 types-python-dateutil
