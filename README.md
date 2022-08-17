@@ -8,13 +8,20 @@ This project is licensed under the terms of the [Mozilla Public License, version
 This project was written by Nick Stockton.
 
 ## Installation
-To install all the dependencies for this program, execute the following shell command from the top directory of this repo.
+To install all the dependencies for this program, execute the following commands from the top directory of this repo.
 ```
-pip install -U -r requirements.txt
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade "poetry==1.1.13"
+poetry install
 ```
+
+If you wish to contribute to this project, install the development dependencies with the following commands.
+```
+source .venv/bin/activate
+pre-commit install -t pre-commit
+pre-commit install -t pre-push
+```
+
 Additionally, you will need a **server** API key from Google. See the [API Keys](https://github.com/googlemaps/google-maps-services-python#user-content-api-keys "Google Maps Services Python API Keys Information") section of the Google Maps Services Python page for information on how to obtain one.
-Once you have obtained your API key, create a file called **key.py** in the top level directory of this repo, and add a line that looks like this.
-```
-API_KEY = "my_api_key"
-```
-Where **my_api_key** is your API key from Google.
+Once you have obtained your API key, copy the file src/travel_data/config.json.sample to src/travel_data/config.json. After that, add your server API key to config.json.

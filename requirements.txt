@@ -1,8 +1,0 @@
-beautifulsoup4
-certifi
-googlemaps
-pyobjc; platform_system == "Darwin"
-python-dateutil
-requests[security]
-speechlight
-wxpython

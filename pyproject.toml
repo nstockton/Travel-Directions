@@ -1,10 +1,121 @@
+[build-system]
+	requires = [
+		"poetry-core>=1.0.0",
+		"poetry-dynamic-versioning>=0.13.1,<0.14.0",
+	]
+	build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+	name = "travel-directions"
+	version = "0.0.0"
+	description = "A GUI front-end to Google Directions, accessible to screen reader users."
+	authors = ["Nick Stockton <nstockton@users.noreply.github.com>"]
+	license = "MPL-2.0"
+	readme = "README.md"
+	homepage = "https://github.com/nstockton/travel-directions"
+	repository = "https://github.com/nstockton/travel-directions"
+	keywords = ["blind", "maps", "google", "directions"]
+	classifiers = [
+		"License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)",
+		"Programming Language :: Python",
+		"Programming Language :: Python :: 3",
+		"Programming Language :: Python :: 3 :: Only",
+		"Programming Language :: Python :: 3.7",
+		"Programming Language :: Python :: 3.8",
+		"Programming Language :: Python :: 3.9",
+		"Programming Language :: Python :: 3.10",
+		"Programming Language :: Python :: Implementation :: CPython",
+		"Operating System :: OS Independent",
+		"Operating System :: POSIX :: Linux",
+		"Operating System :: Unix",
+		"Operating System :: MacOS",
+		"Operating System :: Microsoft :: Windows",
+	]
+	packages = [
+		{include = "travel", from = "src"},
+		{include = "travel_data", from = "src"},
+	]
+	include = [
+		{path = "tests/*", format = "sdist"},
+		{path = "poetry.lock", format = "sdist"},
+	]
+	exclude = [
+		{path = "src/travel_data/.gitignore"},
+	]
+
+[tool.poetry.dependencies]
+	python = ">=3.7,<3.11"
+	beautifulsoup4 = "^4.11"
+	certifi = "^2022.6"
+	googlemaps = "^4.6"
+	numpy = "1.21.6"  # This version has Windows 32/64 bit wheels for Python 3.7-3.10.
+	pyobjc = {version = "^8.5", platform = "darwin"}
+	python-dateutil = "^2.8"
+	requests = {version = "^2.28", extras = ["security"]}
+	speechlight = "^1.7"
+	wxPython = "^4.2"
+
+[tool.poetry.dev-dependencies]
+	click = "8.0.4"  # Required by Tan.
+	coverage = {version = "^6.3", extras = ["toml"]}
+	flake8 = "^3.9"
+	flake8-tabs = "^2.3"
+	isort = "~5.8"
+	jinja2 = "3.0.3"  # Required by Tan.
+	mypy = "^0.931"
+	poetry-dynamic-versioning = "^0.13.1"
+	pre-commit = "^2.17"
+	PyInstaller = {version = "4.10", python = "< 3.11", platform = "win32"}
+	pyproject-flake8 = "^0.0.1-alpha.2"
+	tan = "^21.14"
+	types-beautifulsoup4 = "^4.11"
+	types-certifi = "^2021.10"
+	types-python-dateutil = "^2.8"
+
+[tool.poetry.scripts]
+	travel = "travel.main:run"
+
+[tool.poetry-dynamic-versioning]
+	enable = true
+	vcs = "git"
+	format-jinja = "{% if distance == 0 %}{{ base }}{% else %}{{ base }}+{{ distance }}.g{{ commit|truncate(7,true,'') }}{% endif %}"
+
+[tool.poetry-dynamic-versioning.substitution]
+	files = [
+		"src/*.py", "src/*/__init__.py", "src/*/__version__.py", "src/*/_version.py",
+	]
+	patterns = [
+		"(^__version__(?:\\s*[:]\\s*str)?\\s*=\\s*['\"])[^'\"]*(['\"])",
+	]
+
 [tool.black]
 	use-tabs = true
 	safe = true
 	line-length = 110
-	target-version = ["py37", "py38", "py39"]
+	target-version = ["py37", "py38", "py39", "py310"]
 	exclude = '(/(\.eggs|\.git|\.mypy_cache|\.tox|\.venv|build|dist)|__pycache__)'
-	include = '/(src.*\.py|pyinstaller_windows\.spec|start\.py)$'
+	include = '/((src/travel|tests).*\.py[isw]?|pyinstaller_windows\.spec)$'
+
+[tool.coverage.report]
+	precision = 0
+	fail_under = 10.0
+	show_missing = true
+	skip_covered = true
+	sort = "Cover"
+	exclude_lines = [
+		'\#\s*pragma: no cover',
+		'^\s*raise AssertionError\b',
+		'^\s*raise NotImplementedError\b',
+		'^\s*def __repr__',
+		'^\s*def __str__',
+		'^\s*if __name__ == .__main__.:',
+	]
+
+[tool.coverage.run]
+	source = ["travel"]
+	omit = [
+		"*/travel/__main__.py",
+	]
 
 [tool.flake8]
 	# Note that boolean values need to be inside strings. Flake8 will convert them.
@@ -96,12 +207,12 @@
 	# The heading to display for first-party imports.
 	import_heading_firstparty = "Travel Directions Modules:"
 	# Override known first-party imports.
-	known_first_party = ["Travel_Directions"]
+	known_first_party = ["travel"]
 	# The heading to display for local imports.
 	import_heading_localfolder = "Local Modules:"
 
 [tool.mypy]
-	files = ["src", "pyinstaller_windows.spec", "start.py"]
+	files = ["src/travel", "tests", "pyinstaller_windows.spec"]
 	exclude = '^$'
 	local_partial_types = true
 	strict = true
@@ -112,21 +223,15 @@
 	no_color_output = true
 
 [[tool.mypy.overrides]]
-	module = "_hashlib.*"
-	ignore_missing_imports = true
+	module = "tests.*"
+	disallow_any_decorated = false
 
 [[tool.mypy.overrides]]
-	module = "Cocoa.*"
-	ignore_missing_imports = true
-
-[[tool.mypy.overrides]]
-	module = "googlemaps.*"
-	ignore_missing_imports = true
-
-[[tool.mypy.overrides]]
-	module = "PyInstaller.*"
-	ignore_missing_imports = true
-
-[[tool.mypy.overrides]]
-	module = "wx.*"
+	module = [
+		"_hashlib.*",
+		"Cocoa.*",
+		"googlemaps.*",
+		"PyInstaller.*",
+		"wx.*",
+	]
 	ignore_missing_imports = true

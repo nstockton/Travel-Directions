@@ -133,4 +133,4 @@ dmypy.json
 *.ignore
 key.py
 Travel_Directions_V*/
-travel_directions_version
+Travel_Directions_V*.zip*

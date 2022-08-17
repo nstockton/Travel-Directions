@@ -10,12 +10,15 @@ from __future__ import annotations
 
 # Built-in Modules:
 import calendar
-import os.path
-import sys
+import logging
+import os
+import platform
+import traceback
+from collections.abc import Callable, Mapping, Sequence
 from contextlib import suppress
 from datetime import datetime
 from threading import Thread
-from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Union
+from typing import Any, Optional, Union
 
 # Third-party Modules:
 import certifi
@@ -29,39 +32,42 @@ from speechlight import speech
 from wx.adv import SOUND_ASYNC, Sound
 
 # Local Modules:
-from . import APP_AUTHOR, APP_AUTHOR_EMAIL, APP_NAME, SYSTEM_PLATFORM
+from . import APP_AUTHOR, APP_AUTHOR_EMAIL, APP_NAME, __version__
+from .config import Config
+from .utils import getDataPath, isFrozen
+
+
+logger: logging.Logger = logging.getLogger(__name__)
+
+
+SYSTEM_PLATFORM: str = platform.system()
 
 
 if SYSTEM_PLATFORM == "Darwin":
 	from Cocoa import NSSound
 
 
-API_KEY: Union[str, None]
-try:
-	from key import API_KEY
-except ImportError:
-	API_KEY = None
-
-
-CURRENT_DIRECTORY: str
-if hasattr(sys, "frozen") or hasattr(sys, "importers"):
-	CURRENT_DIRECTORY = os.path.realpath(os.path.dirname(sys.executable))
+if isFrozen():
+	logger.debug("Program is a binary build.")
 	os.environ["REQUESTS_CA_BUNDLE"] = certifi.where()
 else:
-	CURRENT_DIRECTORY = os.path.realpath(os.path.join(os.path.dirname(__file__), os.pardir))
+	logger.debug("Program is running from source.")
 
 
 MULTIPLE_CHOICE_SOUND: Union[str, None]
 try:
-	MULTIPLE_CHOICE_SOUND = os.path.join(CURRENT_DIRECTORY, "sounds/multiple_choice.wav")
+	MULTIPLE_CHOICE_SOUND = getDataPath("sounds", "multiple_choice.wav")
 	with open(MULTIPLE_CHOICE_SOUND, "rb"):
 		pass
+	logger.debug("Loaded multiple choice sound.")
 except IOError:
+	logger.debug("Unable to load multiple choice sound. Continuing.")
 	MULTIPLE_CHOICE_SOUND = None
 
 
 WINDOW_WIDTH: int = 600
 WINDOW_HEIGHT: int = 480
+logger.debug(f"Loading with default window size of {WINDOW_WIDTH}/{WINDOW_HEIGHT}.")
 
 ABOUT_TEXT: str = f"""
 By {APP_AUTHOR} <{APP_AUTHOR_EMAIL}>
@@ -77,8 +83,7 @@ HTML_PARSER: str = "html.parser"
 
 
 class MainFrame(wx.Frame):  # type: ignore[misc, no-any-unimported]
-	def __init__(self, version: str, *args: Any, **kwargs: Any) -> None:
-		self.app_version = version
+	def __init__(self, *args: Any, **kwargs: Any) -> None:
 		super().__init__(*args, **kwargs)
 		self.menu_bar = wx.MenuBar()
 		self.SetMenuBar(self.menu_bar)
@@ -259,16 +264,22 @@ class MainFrame(wx.Frame):  # type: ignore[misc, no-any-unimported]
 		self.panel.SetSizer(self.main_sizer)
 		self.Show()
 		self.status_bar.SetStatusText(" ")
-		rkwargs: Dict[str, Any] = {}
-		if API_KEY is not None:
-			self.gmaps = googlemaps.Client(key=API_KEY, timeout=20, requests_kwargs=rkwargs)
+		logger.debug("GUI initialized.")
+		cfg = Config()
+		api_key: str = cfg.get("maps_client", {}).get("key", "")
+		api_timeout: int = cfg.get("maps_client", {}).get("timeout", 20)
+		del cfg
+		rkwargs: dict[str, Any] = {}
+		if api_key.strip():
+			self.gmaps = googlemaps.Client(key=api_key, timeout=api_timeout, requests_kwargs=rkwargs)
 		else:
+			logger.debug("API key not found.")
 			self.notify("error", "API key not found. See the ReadMe for instructions on how to obtain one.")
 			self.Destroy()
 			return None
 		self.tz_utc = dateutil.tz.tzutc()
 		self.tz_local = dateutil.tz.tzlocal()
-		self.results: List[str] = []
+		self.results: list[str] = []
 
 	def menu_bind(self, item: Any, handler: Callable[[Any], None]) -> None:
 		self.Bind(wx.EVT_MENU, handler, item)
@@ -300,6 +311,7 @@ class MainFrame(wx.Frame):  # type: ignore[misc, no-any-unimported]
 
 	def play_sound(self, filename: Optional[str] = None) -> None:
 		if filename is None:
+			logger.debug("Unable to play sound file.")
 			return None
 		elif SYSTEM_PLATFORM == "Darwin":
 			# Use Cocoa for playing sounds on Mac.
@@ -316,13 +328,14 @@ class MainFrame(wx.Frame):  # type: ignore[misc, no-any-unimported]
 		"""Displays the about dialog."""
 		self.notify(
 			"scrolled",
-			f"{APP_NAME} ({self.app_version})\n{ABOUT_TEXT}",
+			f"{APP_NAME} ({__version__})\n{ABOUT_TEXT}",
 			f"About {APP_NAME}",
 		)
 
 	def on_exit(self, event: Any) -> None:
 		"""Exits the program."""
 		self.Destroy()
+		logger.debug("GUI destroyed.")
 
 	def selected_datetime(self) -> datetime:
 		"""Returns a datetime object with the currently selected values on the GUI"""
@@ -474,10 +487,10 @@ class MainFrame(wx.Frame):  # type: ignore[misc, no-any-unimported]
 			self.notify("error", "You must supply a starting location and a destination.")
 			return None
 		mode: str = self.modes.GetString(self.modes.GetSelection()).lower()
-		waypoints: List[str] = [point.strip() for point in self.waypoints_area.GetValue().split("|")]
+		waypoints: list[str] = [point.strip() for point in self.waypoints_area.GetValue().split("|")]
 		if waypoints:
 			optimize_waypoints: bool = self.optimize_waypoints.IsChecked()
-		avoid: List[str] = []
+		avoid: list[str] = []
 		if self.avoid_highways.IsChecked():
 			avoid.append("highways")
 		if self.avoid_tolls.IsChecked():
@@ -495,7 +508,7 @@ class MainFrame(wx.Frame):  # type: ignore[misc, no-any-unimported]
 		self.avoid_ferries.SetValue(False)
 		self.avoid_indoor.SetValue(False)
 		speech.say("Planning Trip.", True)
-		params: Dict[str, Any] = {
+		params: dict[str, Any] = {
 			"origin": origin,
 			"destination": destination,
 			"mode": mode,
@@ -549,9 +562,9 @@ class MainFrame(wx.Frame):  # type: ignore[misc, no-any-unimported]
 		else:
 			wx.CallAfter(self._process_results, response)
 
-	def _process_leg(self, leg: Mapping[str, Any]) -> List[str]:
-		result: List[str] = []
-		text: List[str] = []
+	def _process_leg(self, leg: Mapping[str, Any]) -> list[str]:
+		result: list[str] = []
+		text: list[str] = []
 		result.append(f"From: {leg['start_address']}\nTo: {leg['end_address']}")
 		if "distance" in leg:
 			text.append(f"Total Distance: {leg['distance']['text']}")
@@ -565,12 +578,12 @@ class MainFrame(wx.Frame):  # type: ignore[misc, no-any-unimported]
 			result.append(f"Arriving: {leg['arrival_time']['text']}")
 		return result
 
-	def _process_step(self, step: Mapping[str, Any]) -> List[str]:
-		result: List[str] = []
-		text: List[str] = []
-		transit_details: Dict[str, Any] = step.get("transit_details", {})
-		line: Dict[str, Any] = transit_details.get("line", {})
-		vehicle: Dict[str, Any] = line.get("vehicle", {})
+	def _process_step(self, step: Mapping[str, Any]) -> list[str]:
+		result: list[str] = []
+		text: list[str] = []
+		transit_details: dict[str, Any] = step.get("transit_details", {})
+		line: dict[str, Any] = transit_details.get("line", {})
+		vehicle: dict[str, Any] = line.get("vehicle", {})
 		if "departure_time" in transit_details:
 			text.append(f"At {transit_details['departure_time']['text']},")
 		if "short_name" in line or "name" in line:
@@ -606,9 +619,9 @@ class MainFrame(wx.Frame):  # type: ignore[misc, no-any-unimported]
 			result.append(" ".join(text).capitalize())
 		return result
 
-	def _process_sub_step(self, sub_step: Mapping[str, Any]) -> List[str]:
-		result: List[str] = []
-		text: List[str] = []
+	def _process_sub_step(self, sub_step: Mapping[str, Any]) -> list[str]:
+		result: list[str] = []
+		text: list[str] = []
 		if "html_instructions" in sub_step:
 			html_instructions: str = sub_step["html_instructions"].replace("<b>", "").replace("</b>", "")
 			result.append(
@@ -626,8 +639,8 @@ class MainFrame(wx.Frame):  # type: ignore[misc, no-any-unimported]
 		return result
 
 	def _process_results(self, response: Sequence[Any]) -> None:
-		summaries: List[str] = []
-		details: List[str]
+		summaries: list[str] = []
+		details: list[str]
 		for route_counter, route in enumerate(response):
 			summaries.append(f"Route {route_counter + 1}")
 			details = []
@@ -658,10 +671,22 @@ class MainFrame(wx.Frame):  # type: ignore[misc, no-any-unimported]
 			self.output_area.SetFocus()
 
 
-def main(version: str) -> None:
+def main() -> None:
 	app = wx.App(redirect=False)
-	window = MainFrame(version, None, title=APP_NAME, size=(WINDOW_WIDTH, WINDOW_HEIGHT))
+	window = MainFrame(None, title=APP_NAME, size=(WINDOW_WIDTH, WINDOW_HEIGHT))
 	app.SetTopWindow(window)
 	window.Center()
 	window.ShowFullScreen(True, wx.FULLSCREEN_NOTOOLBAR)
 	app.MainLoop()
+
+
+def run() -> None:
+	try:
+		logging.debug("Initializing")
+		main()
+	except Exception:
+		traceback.print_exc()
+		logging.exception("OOPS!")
+	finally:
+		logging.debug("Shutting down.")
+		logging.shutdown()

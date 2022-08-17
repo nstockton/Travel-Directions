@@ -25,6 +25,14 @@ repos:
         stages: [commit]
   - repo: local
     hooks:
+      - id: unittest
+        name: UnitTest
+        args: ["--failfast"]
+        stages: [commit]
+        language: system
+        entry: "python -B -m coverage run -m unittest"
+        types: [python]
+        pass_filenames: false
       - id: isort
         name: ISort
         stages: [commit]
@@ -49,4 +57,11 @@ repos:
         language: system
         entry: "python -B -m mypy"
         types_or: [python, spec]
+        pass_filenames: false
+      - id: coverage
+        name: Coverage
+        stages: [push]
+        language: system
+        entry: "python -B -m coverage report"
+        types: [python]
         pass_filenames: false
