@@ -46,7 +46,7 @@
 [tool.poetry.dependencies]
 	python = ">=3.7,<3.11"
 	beautifulsoup4 = "^4.11"
-	certifi = "^2022.6"
+	certifi = "^2022.12"
 	googlemaps = "^4.6"
 	numpy = "1.21.6"  # This version has Windows 32/64 bit wheels for Python 3.7-3.10.
 	pyobjc = {version = "^8.5", platform = "darwin"}
