@@ -1,7 +1,7 @@
 [build-system]
 	requires = [
 		"poetry-core>=1.0.0",
-		"poetry-dynamic-versioning>=0.13.1,<0.14.0",
+		"poetry-dynamic-versioning==0.20.0",
 	]
 	build-backend = "poetry.core.masonry.api"
 
@@ -16,6 +16,8 @@
 	repository = "https://github.com/nstockton/travel-directions"
 	keywords = ["blind", "maps", "google", "directions"]
 	classifiers = [
+		"Development Status :: 5 - Production/Stable",
+		"Intended Audience :: End Users/Desktop",
 		"License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)",
 		"Programming Language :: Python",
 		"Programming Language :: Python :: 3",
@@ -24,12 +26,18 @@
 		"Programming Language :: Python :: 3.8",
 		"Programming Language :: Python :: 3.9",
 		"Programming Language :: Python :: 3.10",
+		"Programming Language :: Python :: 3.11",
+		"Programming Language :: Python :: Implementation",
 		"Programming Language :: Python :: Implementation :: CPython",
+		"Operating System :: MacOS",
+		"Operating System :: MacOS :: MacOS X",
+		"Operating System :: Microsoft",
+		"Operating System :: Microsoft :: Windows",
 		"Operating System :: OS Independent",
+		"Operating System :: POSIX",
+		"Operating System :: POSIX :: BSD",
 		"Operating System :: POSIX :: Linux",
 		"Operating System :: Unix",
-		"Operating System :: MacOS",
-		"Operating System :: Microsoft :: Windows",
 	]
 	packages = [
 		{include = "travel", from = "src"},
@@ -45,32 +53,34 @@
 
 [tool.poetry.dependencies]
 	python = ">=3.7,<3.11"
-	beautifulsoup4 = "^4.11"
-	certifi = "^2022.6"
+	beautifulsoup4 = "^4.10"
+	certifi = "2022.12.7"
 	googlemaps = "^4.6"
 	numpy = "1.21.6"  # This version has Windows 32/64 bit wheels for Python 3.7-3.10.
-	pyobjc = {version = "^8.5", platform = "darwin"}
+	pyobjc = {version = "^8.4", platform = "darwin"}
 	python-dateutil = "^2.8"
-	requests = {version = "^2.28", extras = ["security"]}
+	requests = {version = "^2.27", extras = ["security"]}
 	speechlight = "^1.7"
 	wxPython = "^4.2"
 
 [tool.poetry.dev-dependencies]
 	click = "8.0.4"  # Required by Tan.
-	coverage = {version = "^6.3", extras = ["toml"]}
+	coverage = {version = "^6.5", extras = ["toml"]}
 	flake8 = "^3.9"
 	flake8-tabs = "^2.3"
-	isort = "~5.8"
+	importlib-metadata = "4.13.0"  # Prevent version in Poetry requirements from being overridden.
+	isort = "^5.10.1"
 	jinja2 = "3.0.3"  # Required by Tan.
-	mypy = "^0.931"
-	poetry-dynamic-versioning = "^0.13.1"
+	mypy = ">=0.950,<1.0"
+	poetry-dynamic-versioning = "0.20.0"
 	pre-commit = "^2.17"
 	PyInstaller = {version = "4.10", python = "< 3.11", platform = "win32"}
-	pyproject-flake8 = "^0.0.1-alpha.2"
+	pyproject-flake8 = "^3.9"
+	pyrsistent = "0.18.1"  # Prevent version in Poetry requirements from being overridden.
 	tan = "^21.14"
-	types-beautifulsoup4 = "^4.11"
-	types-certifi = "^2021.10"
+	types-beautifulsoup4 = "^4.10"
 	types-python-dateutil = "^2.8"
+	types-requests = "^2.27"
 
 [tool.poetry.scripts]
 	travel = "travel.main:run"
@@ -168,6 +178,7 @@
 
 [tool.isort]
 	line_length = 110  # The max length of an import line (used for wrapping long imports).
+	color_output = false
 	# Specify what extensions isort can be ran against.
 	supported_extensions = ["py", "pyi", "pys", "pyw", "spec"]
 	extend_skip = []  # List of files to skip.
